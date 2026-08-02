@@ -1,0 +1,2520 @@
+<!DOCTYPE html>
+<!--
+  © 2026 GEG 화성(깊이 e끌림). All rights reserved.
+  본 저작물은 「저작권법」에 따라 보호받으며, 저작권자의 허락 없는 복제·배포·수정을 금합니다.
+  문의: bacusiki777@gmail.com, for2102@jimj.kr
+  BUILD: GEGHS-DEEPE-2026
+-->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>나만의 애니메이션 스튜디오 🎬</title>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+  :root {
+    --bg1: #fdf3df; --bg2: #f6ead0;
+    --ink: #4a3a22; --muted: #9a865f;
+    --primary: #7c5cff; --primary-d: #5b3df0;
+    --accent: #ff7eb6; --accent-d:#e85b97;
+    --green: #2bc48a; --green-d:#1ea273;
+    --yellow: #ffcf4d; --card: #ffffff; --line: #ece8f7; --heart: #ff4d6d;
+    --shadow: 0 1vmin 3vmin rgba(90,60,200,.16);
+    --radius: 2.2vmin;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+
+  /* ===== 스케일 기반 반응형: 화면 크기에 맞춰 글씨도 함께 커집니다 =====
+     가로형 기준이므로 너무 커지지 않도록 상한을 낮춰 콘텐츠가 한 화면에 잘 들어오게 합니다. */
+  html { font-size: clamp(18px, 2.9vmin, 32px); }
+
+  body {
+    font-family: 'Jua', 'Gaegu', system-ui, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(160deg, var(--bg1), var(--bg2));
+    overflow: hidden;
+    -webkit-text-size-adjust: 100%;
+    /* 한국어 줄바꿈: 단어(어절) 단위로만 줄을 넘겨, 단어 중간이 끊기거나
+       한 글자만 아랫줄로 떨어지지 않게 합니다. 너무 긴 단어는 예외로 줄바꿈 허용. */
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+  .hidden { display: none !important; }
+
+  /* ===== 전체 무대: 크림 배경 위에 패널 한 장이 떠 있음 ===== */
+  .stage { height: 100dvh; height: 100vh; display: flex; justify-content: center; align-items: stretch; padding: clamp(.5rem, 2vmin, 1.4rem); }
+
+  /* 패널 = 바깥 틀. 이 안에 [상단메뉴 - 내용 - 이동버튼]이 모두 들어갑니다.
+     가로형 기본: 화면 폭을 거의 채우되(여백 최소화), 세로 높이에 맞춰 가로 비율(약 16:9)을
+     넘지 않게 제한해 항상 가로로 넓은 직사각형을 유지합니다. */
+  .panel {
+    width: 100%; height: 100%;
+    max-width: min(98vw, calc(100dvh * 1.78));
+    display: flex; flex-direction: column;
+    background: #fffaf0; border: .2rem solid #f0e3c4; border-radius: 1.4rem;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  /* 세로가 더 긴 화면(휴대폰/세로 태블릿)에서는 자연스럽게 위아래로 길어집니다. */
+  @media (max-aspect-ratio: 1/1) {
+    .panel { max-width: 98vw; }
+  }
+
+  .topbar {
+    flex: none; display: flex; align-items: center; gap: .6rem;
+    padding: .5rem .9rem; background: #fff6e4;
+    border-bottom: .15rem solid #f0e3c4;
+  }
+  .topbar__home { font-size: 1.5rem; border: none; background: none; cursor: pointer; }
+  .topbar__right { margin-left: auto; display: flex; align-items: center; gap: .5rem; }
+  .whoami { color: var(--primary-d); font-size: 1rem; font-weight: 700; max-width: 30vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .steps { display: flex; gap: .35rem; overflow: hidden; }
+  .step-dot { font-size: .82rem; color: var(--muted); padding: .25rem .7rem; border-radius: 999px; background: #f1edff; white-space: nowrap; }
+  .step-dot.active { background: var(--primary); color: #fff; }
+  .step-dot.done { background: #dff7ec; color: var(--green); }
+  @media (max-width: 620px) { .step-dot { font-size: .7rem; padding: .2rem .45rem; } .step-dot .lbl { display:none; } }
+
+  /* ===== 페이지 영역 ===== */
+  .app { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+  .page {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    padding: clamp(.8rem, 2.6vmin, 2.2rem);
+    gap: .7rem;
+  }
+  .page__head { flex: none; text-align: center; }
+  .page__title { font-size: clamp(1.6rem, 4.4vmin, 2.6rem); margin: 0; line-height: 1.15; }
+  .page__sub { font-size: 1.02rem; color: var(--muted); margin: .25rem 0 0; }
+  .page__body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .8rem; }
+  .scroll-area { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: .2rem; }
+  .center-col { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
+
+  @keyframes slideNext { from { opacity: 0; transform: translateX(7%); } to { opacity: 1; transform: none; } }
+  @keyframes slidePrev { from { opacity: 0; transform: translateX(-7%); } to { opacity: 1; transform: none; } }
+  .page.dir-next { animation: slideNext .26s ease; }
+  .page.dir-prev { animation: slidePrev .26s ease; }
+
+  /* ===== 아래 이동 바 ===== */
+  .navbar {
+    flex: none; display: flex; align-items: center; justify-content: space-between; gap: .6rem;
+    padding: clamp(.5rem, 1.6vmin, 1.1rem) clamp(.8rem, 2.6vmin, 2.2rem);
+    background: #fff6e4; border-top: .15rem solid #f0e3c4;
+  }
+  .navbar .nav-center { flex: 1; text-align: center; color: var(--muted); font-size: .95rem; }
+  .navbar > span { min-width: 2rem; }
+
+  /* ===== 공통 요소 ===== */
+  h2 { font-size: 1.4rem; margin: 0 0 .5rem; }
+  h3 { font-size: 1.15rem; margin: 0 0 .4rem; }
+  .card {
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: clamp(.9rem, 2.4vmin, 1.6rem); border: .15rem solid #fff;
+  }
+
+  .btn {
+    font-family: inherit; font-size: 1.15rem; font-weight: 700; line-height: 1;
+    border: none; border-radius: .8rem; padding: .75em 1.3em;
+    background: var(--primary); color: #fff; cursor: pointer;
+    box-shadow: 0 .35rem 0 var(--primary-d); transition: transform .08s, box-shadow .08s;
+  }
+  .btn:active { transform: translateY(.25rem); box-shadow: 0 .1rem 0 var(--primary-d); }
+  .btn.big { font-size: 1.5rem; padding: .8em 1.5em; }
+  .btn.ghost { background: #fff; color: var(--primary-d); box-shadow: 0 .25rem 0 var(--line); border: .15rem solid var(--line); }
+  .btn.accent { background: var(--accent); box-shadow: 0 .35rem 0 var(--accent-d); }
+  .btn.green { background: var(--green); box-shadow: 0 .35rem 0 var(--green-d); }
+  .btn.gray { background: #c9c4dd; box-shadow: 0 .35rem 0 #aaa3c6; }
+  .btn:disabled { filter: grayscale(.5); opacity: .5; cursor: not-allowed; box-shadow: none; transform: none; }
+  .btn-row { display: flex; gap: .7rem; flex-wrap: wrap; align-items: center; }
+  .icon-btn { font-size: 1.4rem; background: none; border: none; cursor: pointer; }
+  .pill-btn { font-family: inherit; font-size: 1rem; font-weight: 700; border: .15rem solid var(--line); background: #fff; color: var(--primary-d); border-radius: 999px; padding: .4rem .9rem; cursor: pointer; white-space: nowrap; }
+
+  input[type=text], input[type=password], input[type=number], textarea, select {
+    font-family: inherit; font-size: 1.2rem; width: 100%;
+    border: .18rem solid var(--line); border-radius: .8rem; padding: .6em .7em;
+    background: #fbfaff; color: var(--ink); outline: none;
+  }
+  input:focus, textarea:focus { border-color: var(--primary); }
+  textarea { resize: none; }
+  label.field { display: block; font-size: 1.05rem; color: var(--muted); margin: .8rem 0 .3rem; }
+
+  /* ===== 선생님 설정 위저드 ===== */
+  .setup-steps { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: center; margin-bottom: .8rem; flex: none; }
+  .sstep { font-size: .95rem; color: var(--muted); background: #f1edff; border-radius: 999px; padding: .3rem .85rem; white-space: nowrap; }
+  .sstep.on { background: var(--primary); color: #fff; }
+  .sstep.done { background: #dff7ec; color: var(--green); }
+  .setup-card { width: 100%; max-width: 40rem; text-align: left; }
+  .setup-card h2 { text-align: center; }
+  .setup-card p { font-size: 1.05rem; color: #5a5478; margin: .2rem 0 .6rem; line-height: 1.45; }
+  .setup-hint { background: #fff3d6; color: #8a6b32; border-radius: 1rem; padding: .6rem .9rem; font-size: 1rem; }
+  .setup-list { margin: .2rem 0 .9rem; padding-left: 1.3rem; display: flex; flex-direction: column; gap: .45rem; font-size: 1.05rem; line-height: 1.4; }
+  .setup-nav { display: flex; justify-content: space-between; gap: .6rem; margin-top: 1.1rem; }
+  .setup-err { color: var(--heart); font-size: 1rem; margin-top: .4rem; }
+  a.btn { text-decoration: none; display: inline-block; }
+  @media (max-width: 560px) { .sstep .lbl { display: none; } }
+
+  /* ===== 입장: 명단 ===== */
+  .logo { font-size: clamp(3rem, 11vmin, 6rem); line-height: 1; }
+  .roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(7rem, 22vmin, 11rem), 1fr)); gap: .8rem; }
+  .name-card {
+    font-family: inherit; font-size: 1.3rem; cursor: pointer; font-weight: 700;
+    border: .25rem solid var(--line); border-radius: 1.2rem; background: #fff;
+    padding: 1.1rem .5rem; text-align: center; transition: transform .1s;
+  }
+  .name-card:hover, .name-card:active { transform: translateY(-.2rem); border-color: var(--primary); }
+  .name-card .num { display: block; font-size: .85rem; color: var(--muted); font-weight: 400; }
+
+  /* ===== 학습 ===== */
+  .fact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+  @media (max-width: 560px) { .fact-grid { grid-template-columns: 1fr; } }
+  .fact { background: linear-gradient(135deg,#fff,#f6f2ff); border-radius: 1.2rem; padding: 1rem 1.1rem; border: .15rem solid var(--line); }
+  .fact .emoji { font-size: 2.4rem; }
+  .fact h3 { font-size: 1.25rem; margin: .2rem 0; }
+  .fact p { font-size: 1.02rem; margin: 0; color: #5a5478; }
+  .flip-stage {
+    width: clamp(9rem, 34vmin, 16rem); height: clamp(9rem, 34vmin, 16rem);
+    border-radius: 1.5rem; background: #fff; border: .3rem solid var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(5rem, 22vmin, 11rem); box-shadow: var(--shadow);
+  }
+  .step-chips { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; }
+  .chip { background: #fff; border: .15rem solid var(--line); border-radius: 1rem; padding: .7rem 1rem; cursor: pointer; font-size: 1rem; max-width: 14rem; }
+  .chip b { font-size: 1.1rem; }
+  .chip.active { border-color: var(--primary); background: #f4f0ff; }
+
+  /* 설명 한 쪽씩 (왼쪽 큰 그림 + 오른쪽 설명) */
+  .fact-page { flex: 1; min-height: 0; display: flex; gap: 1.2rem; align-items: stretch; }
+  .fact-visual { flex: 0 0 36%; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 1.5rem; border: .15rem solid var(--line); }
+  .fact-emoji { font-size: clamp(5rem, 24vmin, 13rem); }
+  .fact-text { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: .9rem; font-size: 1.15rem; line-height: 1.6; }
+  .fact-text p { margin: 0; }
+  .fact-tip { background: #fff3d6; border-radius: 1rem; padding: .8rem 1.1rem; color: #8a6b32; font-size: 1.05rem; }
+  @media (max-width: 640px) { .fact-page { flex-direction: column; } .fact-visual { flex: 0 0 32%; } }
+
+  /* 플립 4단계: 왼쪽 미리보기/이모지 + 오른쪽 단계 목차 */
+  .flip-layout { flex: 1; min-height: 0; display: flex; gap: 1.3rem; align-items: stretch; }
+  .flip-left { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2rem; }
+  /* 세로 중앙정렬은 margin:auto로 처리 — 내용이 넘쳐도 위가 잘리지 않고, 들어오면 가운데 정렬됩니다 */
+  .flip-right { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+  .toc { list-style: none; margin: auto 0; padding: 0; display: flex; flex-direction: column; gap: .55rem; }
+  .toc li { display: flex; gap: .7rem; align-items: center; background: #fff; border: .18rem solid var(--line); border-radius: 1.1rem; padding: .65rem 1rem; cursor: pointer; }
+  .toc li.active { border-color: var(--primary); background: #f4f0ff; }
+  .toc .n { flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+  .toc-txt { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+  .toc .t { font-size: 1.05rem; font-weight: 700; line-height: 1.2; }
+  .toc .d { font-size: .9rem; color: var(--muted); line-height: 1.25; }
+  @media (max-width: 640px) { .flip-layout { flex-direction: column; } }
+
+  /* 자기평가: 왼쪽 영상 + 오른쪽 체크리스트 (스크롤 없이 한 화면에 들어오도록 압축) */
+  .eval-layout { flex: 1; min-height: 0; display: flex; gap: 1.2rem; align-items: stretch; }
+  .eval-left { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; }
+  .eval-left .player-canvas { max-height: 100%; }
+  /* 내용이 들어오면 세로 가운데, 혹시 넘쳐도 위가 잘리지 않도록 margin:auto 사용 */
+  .eval-right { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+  .eval-right > * { flex: none; }
+  .eval-right > :first-child { margin-top: auto; }
+  .eval-right > :last-child { margin-bottom: auto; }
+  .eval-right h3 { margin: .15rem 0; font-size: 1rem; }
+  #checkList { display: flex; flex-direction: column; gap: .35rem; }
+  .eval-right .check-item { padding: .5rem .8rem; font-size: 1rem; }
+  .eval-right .check-item input { width: 1.4rem; height: 1.4rem; }
+  .eval-right .peer-row { margin: .25rem 0; font-size: 1rem; }
+  .eval-right .stars { font-size: 1.5rem; letter-spacing: .15rem; }
+  @media (max-width: 680px) { .eval-layout { flex-direction: column; } }
+
+  /* 작은 버튼 (촬영 화면 등 공간 절약용) */
+  .btn.sm { font-size: 1rem; padding: .5em 1.1em; }
+
+  /* ===== 계획 ===== */
+  .storyboard { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(9rem, 30vmin, 14rem), 1fr)); gap: .8rem; }
+  .sb-cell { background: #fff; border: .18rem dashed var(--line); border-radius: 1rem; padding: .7rem; }
+  .sb-cell .sb-num { font-size: .95rem; color: var(--muted); display: flex; justify-content: space-between; }
+  .sb-cell textarea { min-height: 4.5rem; font-size: 1rem; margin-top: .3rem; }
+  .sb-cell .del { background: none; border: none; color: var(--heart); cursor: pointer; font-size: .95rem; }
+
+  /* ===== 촬영 스튜디오 ===== */
+  .tabbar { display: flex; gap: .4rem; justify-content: center; flex: none; }
+  .tab { font-family: inherit; font-size: .95rem; font-weight: 700; border: none; cursor: pointer; padding: .35rem 1rem; border-radius: 999px; background: #efeaff; color: var(--primary-d); }
+  .tab.active { background: var(--primary); color: #fff; }
+  .cap-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .5rem; }
+  /* 카메라 미리보기를 가운데 두는 영역. 남는 공간은 검정이 아니라 앱 배경색이라 검은 여백이 보이지 않습니다 */
+  .cap-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  /* 박스를 '실제 카메라 화면 비율'(--cam-ar)에 맞춰 키워, 검은 띠 없이 화면을 최대한 크게 채웁니다.
+     기본값 4/3은 카메라 정보가 들어오기 전 잠깐만 쓰이고, 곧 실제 비율로 교체됩니다. */
+  .capture-box {
+    position: relative;
+    aspect-ratio: var(--cam-ar, 4 / 3);
+    height: 100%; max-width: 100%; width: auto; margin: 0 auto;
+    background: #111; border-radius: 1.2rem; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .capture-box video, .capture-box img, .capture-box canvas { width: 100%; height: 100%; object-fit: cover; }
+  /* 세로가 더 긴 화면(휴대폰/세로 태블릿)에서는 가로폭에 맞춰 채웁니다 */
+  @media (max-aspect-ratio: 1/1) { .capture-box { height: auto; width: 100%; max-height: 100%; } }
+  .capture-empty { color: #fff; opacity: .75; text-align: center; padding: 1rem; font-size: 1.05rem; }
+  .player-canvas { width: 100%; aspect-ratio: 4/3; max-height: 100%; margin: auto; border-radius: 1.2rem; background: #000; display: block; }
+  #capPreview { justify-content: center; align-items: center; }
+  .frames-strip { display: flex; gap: .4rem; overflow-x: auto; padding: .3rem 0; flex: none; height: clamp(3rem, 8.5vmin, 4.4rem); }
+  .frame-thumb { position: relative; flex: 0 0 auto; aspect-ratio: 4/3; height: 100%; border-radius: .7rem; overflow: hidden; border: .22rem solid #d3c9f2; background: #000; box-shadow: 0 .15rem .5rem rgba(90,60,200,.18); }
+  .frame-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  /* 컷 번호: 잘 보이도록 보라색 배지로 강조 (몇 번째 컷인지 한눈에) */
+  .frame-thumb .idx { position: absolute; left: .15rem; top: .15rem; font-size: .85rem; font-weight: 700; background: rgba(124,92,255,.92); color: #fff; padding: .05rem .45rem; border-radius: .4rem; }
+  /* 삭제 X: 작게 (사진 위 순서 이동 화살표는 없앰 — 목록 양 끝 화살표로 넘겨 봅니다) */
+  .frame-thumb .del { position: absolute; right: .12rem; top: .12rem; background: var(--heart); color: #fff; border: none; border-radius: 50%; width: 1rem; height: 1rem; cursor: pointer; font-size: .58rem; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center; }
+  .speed-row { display: flex; align-items: center; gap: .6rem; flex: none; font-size: 1.4rem; }
+  input[type=range] { flex: 1; accent-color: var(--primary); height: 1.6rem; }
+
+  /* ===== 촬영 탭 가로 배치: 왼쪽에 붙는 카메라 + 오른쪽 넓은 컷 목록/버튼 ===== */
+  .shoot-split { flex: 1; min-height: 0; display: flex; gap: .7rem; align-items: stretch; }
+  /* 카메라는 왼쪽에 붙이고(가운데 정렬 X), 화면 비율만큼만 폭을 차지합니다 */
+  .shoot-split .cap-stage { flex: 0 0 auto; justify-content: flex-start; }
+  /* 오른쪽 영역이 남는 공간을 모두 차지 → 컷이 가로로 넓게 채워집니다 */
+  .shoot-side { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .5rem; }
+  .shoot-actions { flex: none; display: flex; flex-direction: row; flex-wrap: wrap; gap: .5rem; }
+  .shoot-strip-label { flex: none; font-size: 1rem; color: var(--muted); }
+  /* 찍은 컷: ◀ [필름스트립] ▶ — 양 끝 화살표로 좌우로 넘겨 봅니다 */
+  .shoot-strip-nav { flex: none; display: flex; align-items: center; gap: .4rem; }
+  .navarrow {
+    flex: none; font-family: inherit; cursor: pointer;
+    font-size: 1.5rem; line-height: 1; color: var(--primary-d);
+    background: #fff; border: .18rem solid var(--line); border-radius: 999px;
+    width: 2.4rem; height: 2.4rem; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 .2rem 0 var(--line);
+  }
+  .navarrow:active { transform: translateY(.1rem); box-shadow: none; }
+  .navarrow:disabled { opacity: .3; box-shadow: none; cursor: default; }
+  /* 2줄 × 4칸 = 한 번에 8컷. 더 많으면 화살표로 페이지를 넘깁니다 (.frames-strip 뒤에 와야 우선 적용) */
+  .shoot-strip-nav .frames-strip {
+    flex: 1 1 auto; min-width: 0; height: auto;
+    display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: auto;
+    gap: .5rem; overflow: hidden; padding: .2rem; align-content: center;
+  }
+  .shoot-strip-nav .frame-thumb { flex: none; width: 100%; height: auto; }
+  /* 좁은 화면: 카메라 위 / 버튼·컷 목록 아래로 자동 전환 */
+  @media (max-width: 720px) {
+    .shoot-split { flex-direction: column; }
+    .shoot-split .cap-stage { flex: 1 1 auto; justify-content: center; }
+    .shoot-side { flex: none; }
+    .shoot-actions { justify-content: center; }
+  }
+
+  /* ===== 자기평가 ===== */
+  .check-item { display: flex; align-items: center; gap: .7rem; padding: .8rem 1rem; border-radius: .9rem; cursor: pointer; border: .18rem solid var(--line); background: #fff; font-size: 1.12rem; }
+  .check-item input { width: 1.7rem; height: 1.7rem; accent-color: var(--green); flex: none; }
+  .check-item.checked { border-color: var(--green); background: #f1fbf6; }
+  .stars { font-size: 1.9rem; cursor: pointer; letter-spacing: .25rem; user-select: none; white-space: nowrap; }
+  .star { color: #d9d4ec; } .star.on { color: var(--yellow); }
+  .peer-row { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin: .5rem 0; font-size: 1.05rem; }
+
+  /* ===== 보드 ===== */
+  .board-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(9rem, 27vmin, 14rem), 1fr)); gap: 1rem; }
+  .vid-card { background: #fff; border-radius: 1.2rem; box-shadow: var(--shadow); overflow: hidden; cursor: pointer; border: .15rem solid #fff; transition: transform .12s; position: relative; }
+  .vid-card:hover { transform: translateY(-.25rem); }
+  .vid-card .rank { position: absolute; left: .5rem; top: .5rem; z-index: 2; background: var(--yellow); color: #7a5a00; font-weight: 700; border-radius: 999px; padding: .15rem .7rem; font-size: 1rem; box-shadow: var(--shadow); }
+  .vid-card .thumb { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #eee; display: block; }
+  .vid-card .meta { padding: .7rem .8rem; }
+  .vid-card .meta h3 { margin: 0 0 .2rem; font-size: 1.15rem; }
+  .vid-card .by { color: var(--muted); font-size: .95rem; }
+  .vid-card .heart-line { display: flex; align-items: center; gap: .3rem; margin-top: .4rem; color: var(--heart); font-size: 1.2rem; font-weight: 700; }
+
+  /* ===== 감상 모달 ===== */
+  .modal-back { position: fixed; inset: 0; background: rgba(40,30,80,.55); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 1rem; }
+  .modal { background: #fff; border-radius: 1.6rem; max-width: 60rem; width: 100%; max-height: 94dvh; overflow: auto; box-shadow: var(--shadow); }
+  .modal__body { padding: clamp(1rem, 3vmin, 2rem); }
+  .modal__close { float: right; font-size: 1.7rem; border: none; background: none; cursor: pointer; color: var(--muted); }
+  .watch-grid { display: grid; grid-template-columns: 1.2fr .9fr; gap: 1.2rem; }
+  @media (max-width: 720px) { .watch-grid { grid-template-columns: 1fr; } }
+  .watch-canvas { width: 100%; aspect-ratio: 4/3; border-radius: 1.2rem; background: #000; object-fit: contain; }
+  .heart-btn { font-size: 2.2rem; background: none; border: none; cursor: pointer; transition: transform .1s; }
+  .heart-btn:active { transform: scale(1.3); }
+  .comment { background: #f7f5ff; border-radius: .8rem; padding: .55rem .7rem; margin-bottom: .5rem; font-size: 1.05rem; }
+  .comment .who { color: var(--primary-d); font-weight: 700; }
+  .comment-list { max-height: 14rem; overflow: auto; }
+
+  /* ===== 토스트 / 로딩 ===== */
+  .toast { position: fixed; left: 50%; bottom: 5rem; transform: translateX(-50%); background: var(--ink); color: #fff; padding: .7rem 1.3rem; border-radius: 999px; z-index: 80; box-shadow: var(--shadow); font-size: 1.1rem; animation: slideNext .2s; max-width: 90vw; text-align: center; }
+  .loading { position: fixed; inset: 0; background: rgba(255,255,255,.78); display: flex; flex-direction: column; gap: .9rem; align-items: center; justify-content: center; z-index: 90; color: var(--primary-d); font-size: 1.3rem; }
+  .loading__spinner { width: 3.4rem; height: 3.4rem; border: .45rem solid #e3dcff; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-note { text-align: center; color: var(--muted); padding: 2.5rem 1rem; font-size: 1.2rem; }
+  .tag { display: inline-block; background: #f1edff; color: var(--primary-d); border-radius: 999px; padding: .15rem .7rem; font-size: 1rem; }
+  details summary { cursor: pointer; font-size: 1.02rem; color: var(--muted); }
+  pre.plan { white-space: pre-wrap; font-family: inherit; background: #f7f5ff; padding: .8rem; border-radius: .8rem; font-size: 1rem; margin: .5rem 0 0; }
+
+  /* ===== 여정 홈 내부 요소 (헤더/배지/카드) ===== */
+  .home__head { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; flex: none; }
+  .mascot { font-size: clamp(2.2rem, 6.5vmin, 3.6rem); background: #ffe9c2; border-radius: 50%; width: clamp(3.4rem, 10vmin, 5.4rem); height: clamp(3.4rem, 10vmin, 5.4rem); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); flex: none; }
+  .home__hi { flex: 1; min-width: 8rem; }
+  .home__title { font-size: 1.15rem; color: #bb8533; }
+  .home__greet { font-size: clamp(1.3rem, 3.8vmin, 1.9rem); }
+  .badges { display: flex; gap: .55rem; flex-wrap: wrap; }
+  .badge { display: flex; align-items: center; gap: .35rem; background: #fff; border: .18rem solid #f0e3c4; border-radius: 999px; padding: .35rem .85rem; font-size: 1.02rem; }
+  .badge .v { font-weight: 700; color: var(--primary-d); }
+  .badge .l { color: var(--muted); font-size: .88rem; }
+  .hub-row { flex: 1; min-height: 0; display: flex; align-items: stretch; justify-content: center; gap: .6rem; flex-wrap: wrap; }
+  .hub-card { position: relative; flex: 1 1 13rem; max-width: 18rem; min-width: 10.5rem; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .5rem; border-radius: 1.6rem; padding: 1.5rem 1rem 1.2rem; color: #fff; box-shadow: var(--shadow); }
+  .hub-card.orange { background: linear-gradient(160deg, #ffa75f, #ff8330); }
+  .hub-card.green  { background: linear-gradient(160deg, #46d39a, #1fb87d); }
+  .hub-card.yellow { background: linear-gradient(160deg, #ffd45e, #ffb52a); }
+  .hub-num { position: absolute; left: .8rem; top: .8rem; background: #fff; color: #5a4a2a; width: 1.9rem; height: 1.9rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; box-shadow: var(--shadow); }
+  .hub-icon { font-size: clamp(2.6rem, 8vmin, 4rem); margin-top: .5rem; }
+  .hub-title { font-size: 1.45rem; }
+  .hub-sub { font-size: 1rem; opacity: .95; line-height: 1.35; }
+  .hub-start { margin-top: auto; font-family: inherit; font-size: 1.15rem; font-weight: 700; border: none; cursor: pointer; background: #fff; color: #444; border-radius: 999px; padding: .6em 1.4em; box-shadow: 0 .3rem 0 rgba(0,0,0,.13); }
+  .hub-start:active { transform: translateY(.2rem); box-shadow: 0 .1rem 0 rgba(0,0,0,.13); }
+  .hub-arrow { display: flex; align-items: center; font-size: 2.2rem; color: #e0ad53; }
+  .home__hint { text-align: center; font-size: 1.05rem; color: #8a6b32; background: #fff3d6; border-radius: 1rem; padding: .7rem 1rem; flex: none; }
+  @media (max-width: 680px) {
+    .hub-row { flex-direction: column; }
+    .hub-arrow { transform: rotate(90deg); justify-content: center; }
+    .hub-card { max-width: none; flex: none; }
+  }
+
+  /* ===== 관리 버튼 (상단바에서 눈에 띄게) ===== */
+  .pill-btn.admin { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 .25rem 0 var(--primary-d); }
+  .pill-btn.admin:active { transform: translateY(.15rem); box-shadow: none; }
+
+  /* ===== 관리 사이드바 ===== */
+  .sidebar-back { position: fixed; inset: 0; background: rgba(40,30,80,.5); z-index: 60; display: flex; justify-content: flex-end; }
+  .sidebar { width: min(27rem, 92vw); height: 100%; background: #fffaf0; box-shadow: var(--shadow); display: flex; flex-direction: column; animation: slideInRight .24s ease; }
+  @keyframes slideInRight { from { transform: translateX(100%); } to { transform: none; } }
+  .sidebar__head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: .8rem 1rem; background: #fff6e4; border-bottom: .15rem solid #f0e3c4; }
+  .sidebar__head h2 { margin: 0; font-size: 1.35rem; }
+  .sidebar__body { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+  .sidebar__sec { background: #fff; border: .15rem solid var(--line); border-radius: 1.1rem; padding: .9rem 1rem; }
+  .sidebar__sec h3 { display: flex; align-items: center; gap: .4rem; margin: 0 0 .4rem; }
+  .dash-stat { display: flex; gap: .7rem; flex-wrap: wrap; margin: .2rem 0 .5rem; }
+  .dash-num { background: #f4f0ff; border-radius: 1rem; padding: .5rem .9rem; text-align: center; flex: 1 1 auto; }
+  .dash-num b { display: block; font-size: 1.7rem; color: var(--primary-d); line-height: 1.1; }
+  .dash-num span { font-size: .85rem; color: var(--muted); }
+  .rank-list { list-style: none; margin: .3rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
+  .rank-list li { display: flex; align-items: center; gap: .5rem; font-size: 1rem; }
+  .rank-list .rk { flex: none; width: 1.7rem; text-align: center; font-weight: 700; color: var(--primary-d); }
+  .rank-list .ti { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rank-list .ht { flex: none; color: var(--heart); font-weight: 700; }
+  .chip-list { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .3rem; }
+  .chip-name { background: #f7f5ff; border: .12rem solid var(--line); border-radius: 999px; padding: .2rem .65rem; font-size: .92rem; }
+</style>
+
+</head>
+<body>
+<div id="demoBannerFixed" style="display:none; position:fixed; left:50%; transform:translateX(-50%); bottom:16px; z-index:99999; max-width:calc(100% - 32px); width:340px; background:#fff4d6; color:#8a6d1a; border:1px solid #f2d675; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.15); padding:12px 14px; font-size:13px; line-height:1.5; align-items:flex-start; gap:10px;">
+  <span style="flex:1;">지금은 체험 모드예요. 만든 작품은 이 기기에만 남아요. 선생님이 시트를 연결하면 우리 반 기록으로 저장됩니다.</span>
+  <button onclick="document.getElementById('demoBannerFixed').style.display='none'" style="flex-shrink:0; background:none; border:none; color:#8a6d1a; font-size:18px; line-height:1; cursor:pointer; padding:0 2px;">×</button>
+</div>
+
+  <div class="stage">
+    <div class="panel">
+      <header id="topbar" class="topbar hidden">
+        <button id="homeBtn" class="topbar__home" title="처음으로">🎬</button>
+        <div id="stepDots" class="steps"></div>
+        <div class="topbar__right">
+          <span id="whoami" class="whoami"></span>
+          <button id="boardBtn" class="pill-btn">🖼️ 친구 작품</button>
+        </div>
+      </header>
+      <main id="app" class="app"></main>
+      <footer id="navbar" class="navbar"></footer>
+    </div>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+  <div id="modalRoot"></div>
+  <div id="sidebarRoot"></div>
+  <div id="loading" class="loading hidden"><div class="loading__spinner"></div><span id="loadingText">잠깐만요…</span></div>
+  <script>
+/* =========================================================
+ *  애니메이션 GIF 만들기 (외부 라이브러리 없이 자체 내장)
+ *  - NeuQuant 색상 양자화 + LZW 압축으로 재생되는 .gif 를 만듭니다.
+ *  - 만들어진 GIF 는 선생님 드라이브에 저장되어 바로 재생·미리보기 됩니다.
+ *  원저작: Kevin Weiner (GIFEncoder/LZWEncoder), Anthony Dekker (NeuQuant) — public domain 포팅.
+ * ========================================================= */
+(function () {
+  'use strict';
+
+  /* ---------- NeuQuant : 256색 팔레트 만들기 ---------- */
+  function NeuQuant(pixels, len, sample) {
+    var netsize = 256;
+    var prime1 = 499, prime2 = 491, prime3 = 487, prime4 = 503;
+    var maxnetpos = netsize - 1;
+    var netbiasshift = 4;
+    var ncycles = 100;
+    var intbiasshift = 16;
+    var intbias = (1 << intbiasshift);
+    var gammashift = 10;
+    var betashift = 10;
+    var beta = (intbias >> betashift);
+    var betagamma = (intbias << (gammashift - betashift));
+    var initrad = (netsize >> 3);
+    var radiusbiasshift = 6;
+    var radiusbias = (1 << radiusbiasshift);
+    var initradius = (initrad * radiusbias);
+    var radiusdec = 30;
+    var alphabiasshift = 10;
+    var initalpha = (1 << alphabiasshift);
+    var alphadec;
+    var radbiasshift = 8;
+    var radbias = (1 << radbiasshift);
+    var alpharadbshift = (alphabiasshift + radbiasshift);
+    var alpharadbias = (1 << alpharadbshift);
+
+    var thepicture = pixels;
+    var lengthcount = len;
+    var samplefac = sample;
+
+    var network = [];
+    var netindex = [];
+    var bias = [];
+    var freq = [];
+    var radpower = [];
+
+    function init() {
+      var i, p;
+      for (i = 0; i < netsize; i++) {
+        network[i] = [];
+        p = network[i];
+        p[0] = p[1] = p[2] = ((i << (netbiasshift + 8)) / netsize) | 0;
+        freq[i] = (intbias / netsize) | 0;
+        bias[i] = 0;
+      }
+      for (i = 0; i < netsize; i++) netindex[i] = 0;
+      for (i = 0; i < 256; i++) radpower[i] = 0;
+    }
+
+    function unbiasnet() {
+      for (var i = 0; i < netsize; i++) {
+        network[i][0] >>= netbiasshift;
+        network[i][1] >>= netbiasshift;
+        network[i][2] >>= netbiasshift;
+        network[i][3] = i;
+      }
+    }
+
+    function altersingle(alpha, i, b, g, r) {
+      var n = network[i];
+      n[0] -= ((alpha * (n[0] - b)) / initalpha) | 0;
+      n[1] -= ((alpha * (n[1] - g)) / initalpha) | 0;
+      n[2] -= ((alpha * (n[2] - r)) / initalpha) | 0;
+    }
+
+    function alterneigh(rad, i, b, g, r) {
+      var lo = Math.abs(i - rad);
+      var hi = Math.min(i + rad, netsize);
+      var j = i + 1, k = i - 1, m = 1, p, a;
+      while ((j < hi) || (k > lo)) {
+        a = radpower[m++];
+        if (j < hi) {
+          p = network[j++];
+          p[0] -= ((a * (p[0] - b)) / alpharadbias) | 0;
+          p[1] -= ((a * (p[1] - g)) / alpharadbias) | 0;
+          p[2] -= ((a * (p[2] - r)) / alpharadbias) | 0;
+        }
+        if (k > lo) {
+          p = network[k--];
+          p[0] -= ((a * (p[0] - b)) / alpharadbias) | 0;
+          p[1] -= ((a * (p[1] - g)) / alpharadbias) | 0;
+          p[2] -= ((a * (p[2] - r)) / alpharadbias) | 0;
+        }
+      }
+    }
+
+    function contest(b, g, r) {
+      var bestd = ~(1 << 31);
+      var bestbiasd = bestd;
+      var bestpos = -1;
+      var bestbiaspos = bestpos;
+      var i, n, dist, biasdist, betafreq;
+      for (i = 0; i < netsize; i++) {
+        n = network[i];
+        dist = Math.abs(n[0] - b) + Math.abs(n[1] - g) + Math.abs(n[2] - r);
+        if (dist < bestd) { bestd = dist; bestpos = i; }
+        biasdist = dist - ((bias[i]) >> (intbiasshift - netbiasshift));
+        if (biasdist < bestbiasd) { bestbiasd = biasdist; bestbiaspos = i; }
+        betafreq = (freq[i] >> betashift);
+        freq[i] -= betafreq;
+        bias[i] += (betafreq << gammashift);
+      }
+      freq[bestpos] += beta;
+      bias[bestpos] -= betagamma;
+      return bestbiaspos;
+    }
+
+    function inxbuild() {
+      var i, j, p, q, smallpos, smallval, previouscol = 0, startpos = 0;
+      for (i = 0; i < netsize; i++) {
+        p = network[i];
+        smallpos = i;
+        smallval = p[1];
+        for (j = i + 1; j < netsize; j++) {
+          q = network[j];
+          if (q[1] < smallval) { smallpos = j; smallval = q[1]; }
+        }
+        q = network[smallpos];
+        if (i !== smallpos) {
+          j = q[0]; q[0] = p[0]; p[0] = j;
+          j = q[1]; q[1] = p[1]; p[1] = j;
+          j = q[2]; q[2] = p[2]; p[2] = j;
+          j = q[3]; q[3] = p[3]; p[3] = j;
+        }
+        if (smallval !== previouscol) {
+          netindex[previouscol] = (startpos + i) >> 1;
+          for (j = previouscol + 1; j < smallval; j++) netindex[j] = i;
+          previouscol = smallval;
+          startpos = i;
+        }
+      }
+      netindex[previouscol] = (startpos + maxnetpos) >> 1;
+      for (j = previouscol + 1; j < 256; j++) netindex[j] = maxnetpos;
+    }
+
+    function inxsearch(b, g, r) {
+      var a, p, dist, i = netindex[g], j = i - 1, best = -1, bestd = 1000;
+      while ((i < netsize) || (j >= 0)) {
+        if (i < netsize) {
+          p = network[i];
+          dist = p[1] - g;
+          if (dist >= bestd) i = netsize;
+          else {
+            i++;
+            if (dist < 0) dist = -dist;
+            a = p[0] - b; if (a < 0) a = -a; dist += a;
+            if (dist < bestd) {
+              a = p[2] - r; if (a < 0) a = -a; dist += a;
+              if (dist < bestd) { bestd = dist; best = p[3]; }
+            }
+          }
+        }
+        if (j >= 0) {
+          p = network[j];
+          dist = g - p[1];
+          if (dist >= bestd) j = -1;
+          else {
+            j--;
+            if (dist < 0) dist = -dist;
+            a = p[0] - b; if (a < 0) a = -a; dist += a;
+            if (dist < bestd) {
+              a = p[2] - r; if (a < 0) a = -a; dist += a;
+              if (dist < bestd) { bestd = dist; best = p[3]; }
+            }
+          }
+        }
+      }
+      return best;
+    }
+
+    function learn() {
+      var i, j, b, g, r, radius, rad, alpha, step, delta, samplepixels, pix, lim;
+      if (lengthcount < (3 * prime4)) samplefac = 1;
+      alphadec = 30 + ((samplefac - 1) / 3);
+      pix = 0;
+      lim = lengthcount;
+      samplepixels = (lengthcount / (3 * samplefac)) | 0;
+      delta = (samplepixels / ncycles) | 0;
+      alpha = initalpha;
+      radius = initradius;
+      rad = radius >> radiusbiasshift;
+      if (rad <= 1) rad = 0;
+      for (i = 0; i < rad; i++) {
+        radpower[i] = (alpha * (((rad * rad - i * i) * radbias) / (rad * rad))) | 0;
+      }
+      if (lengthcount < (3 * prime4)) step = 3;
+      else if ((lengthcount % prime1) !== 0) step = 3 * prime1;
+      else if ((lengthcount % prime2) !== 0) step = 3 * prime2;
+      else if ((lengthcount % prime3) !== 0) step = 3 * prime3;
+      else step = 3 * prime4;
+      i = 0;
+      while (i < samplepixels) {
+        b = (thepicture[pix] & 0xff) << netbiasshift;
+        g = (thepicture[pix + 1] & 0xff) << netbiasshift;
+        r = (thepicture[pix + 2] & 0xff) << netbiasshift;
+        j = contest(b, g, r);
+        altersingle(alpha, j, b, g, r);
+        if (rad !== 0) alterneigh(rad, j, b, g, r);
+        pix += step;
+        if (pix >= lim) pix -= lengthcount;
+        i++;
+        if (delta === 0) delta = 1;
+        if (i % delta === 0) {
+          alpha -= (alpha / alphadec) | 0;
+          radius -= (radius / radiusdec) | 0;
+          rad = radius >> radiusbiasshift;
+          if (rad <= 1) rad = 0;
+          for (j = 0; j < rad; j++) {
+            radpower[j] = (alpha * (((rad * rad - j * j) * radbias) / (rad * rad))) | 0;
+          }
+        }
+      }
+    }
+
+    this.buildColormap = function () { init(); learn(); unbiasnet(); inxbuild(); };
+    this.getColormap = function () {
+      var map = [], index = [], i;
+      for (i = 0; i < netsize; i++) index[network[i][3]] = i;
+      var k = 0;
+      for (i = 0; i < netsize; i++) {
+        var j = index[i];
+        map[k++] = (network[j][0]) & 0xff;
+        map[k++] = (network[j][1]) & 0xff;
+        map[k++] = (network[j][2]) & 0xff;
+      }
+      return map;
+    };
+    this.lookupRGB = function (b, g, r) { return inxsearch(b, g, r); };
+  }
+
+  /* ---------- LZW 압축 (GIF) ---------- */
+  function LZWEncoder(width, height, pixels, color_depth) {
+    var EOF = -1;
+    var imgW = width, imgH = height;
+    var pixAry = pixels;
+    var initCodeSize = Math.max(2, color_depth);
+
+    var BITS = 12;
+    var HSIZE = 5003;
+    var n_bits, maxbits = BITS, maxcode, maxmaxcode = 1 << BITS;
+    var htab = [], codetab = [];
+    var hsize = HSIZE;
+    var free_ent = 0;
+    var clear_flg = false;
+    var g_init_bits, ClearCode, EOFCode;
+    var cur_accum = 0, cur_bits = 0;
+    var masks = [0x0000, 0x0001, 0x0003, 0x0007, 0x000F, 0x001F, 0x003F, 0x007F,
+      0x00FF, 0x01FF, 0x03FF, 0x07FF, 0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF];
+    var a_count;
+    var accum = [];
+    var remaining, curPixel;
+
+    function MAXCODE(nb) { return (1 << nb) - 1; }
+
+    function char_out(c, outs) {
+      accum[a_count++] = c;
+      if (a_count >= 254) flush_char(outs);
+    }
+    function flush_char(outs) {
+      if (a_count > 0) {
+        outs.writeByte(a_count);
+        outs.writeBytes(accum, 0, a_count);
+        a_count = 0;
+      }
+    }
+    function cl_hash(hsizeVal) { for (var i = 0; i < hsizeVal; ++i) htab[i] = -1; }
+    function cl_block(outs) {
+      cl_hash(hsize);
+      free_ent = ClearCode + 2;
+      clear_flg = true;
+      output(ClearCode, outs);
+    }
+
+    function output(code, outs) {
+      cur_accum &= masks[cur_bits];
+      if (cur_bits > 0) cur_accum |= (code << cur_bits);
+      else cur_accum = code;
+      cur_bits += n_bits;
+      while (cur_bits >= 8) {
+        char_out((cur_accum & 0xff), outs);
+        cur_accum >>= 8;
+        cur_bits -= 8;
+      }
+      if (free_ent > maxcode || clear_flg) {
+        if (clear_flg) { maxcode = MAXCODE(n_bits = g_init_bits); clear_flg = false; }
+        else {
+          ++n_bits;
+          if (n_bits === maxbits) maxcode = maxmaxcode;
+          else maxcode = MAXCODE(n_bits);
+        }
+      }
+      if (code === EOFCode) {
+        while (cur_bits > 0) {
+          char_out((cur_accum & 0xff), outs);
+          cur_accum >>= 8;
+          cur_bits -= 8;
+        }
+        flush_char(outs);
+      }
+    }
+
+    function nextPixel() {
+      if (remaining === 0) return EOF;
+      --remaining;
+      var pix = pixAry[curPixel++];
+      return pix & 0xff;
+    }
+
+    function compress(init_bits, outs) {
+      var fcode, c, i, ent, disp, hsize_reg, hshift;
+      g_init_bits = init_bits;
+      clear_flg = false;
+      n_bits = g_init_bits;
+      maxcode = MAXCODE(n_bits);
+      ClearCode = 1 << (init_bits - 1);
+      EOFCode = ClearCode + 1;
+      free_ent = ClearCode + 2;
+      a_count = 0;
+      ent = nextPixel();
+
+      hshift = 0;
+      for (fcode = hsize; fcode < 65536; fcode *= 2) ++hshift;
+      hshift = 8 - hshift;
+      hsize_reg = hsize;
+      cl_hash(hsize_reg);
+      output(ClearCode, outs);
+
+      outer_loop: while ((c = nextPixel()) !== EOF) {
+        fcode = (c << maxbits) + ent;
+        i = (c << hshift) ^ ent;
+        if (htab[i] === fcode) { ent = codetab[i]; continue; }
+        else if (htab[i] >= 0) {
+          disp = hsize_reg - i;
+          if (i === 0) disp = 1;
+          do {
+            if ((i -= disp) < 0) i += hsize_reg;
+            if (htab[i] === fcode) { ent = codetab[i]; continue outer_loop; }
+          } while (htab[i] >= 0);
+        }
+        output(ent, outs);
+        ent = c;
+        if (free_ent < maxmaxcode) {
+          codetab[i] = free_ent++;
+          htab[i] = fcode;
+        } else cl_block(outs);
+      }
+      output(ent, outs);
+      output(EOFCode, outs);
+    }
+
+    this.encode = function (outs) {
+      outs.writeByte(initCodeSize);
+      remaining = imgW * imgH;
+      curPixel = 0;
+      compress(initCodeSize + 1, outs);
+      outs.writeByte(0);
+    };
+  }
+
+  /* ---------- 바이트 출력 버퍼 ---------- */
+  function ByteArray() { this.data = []; }
+  ByteArray.prototype.writeByte = function (v) { this.data.push(v & 0xff); };
+  ByteArray.prototype.writeUTFBytes = function (s) { for (var i = 0; i < s.length; i++) this.data.push(s.charCodeAt(i) & 0xff); };
+  ByteArray.prototype.writeBytes = function (arr, off, len) {
+    off = off || 0; if (len == null) len = arr.length;
+    for (var i = off; i < off + len; i++) this.data.push(arr[i] & 0xff);
+  };
+  ByteArray.prototype.toBase64 = function () {
+    var d = this.data, out = '', i, chunk = 0x8000, str = '';
+    for (i = 0; i < d.length; i += chunk) {
+      str += String.fromCharCode.apply(null, d.slice(i, i + chunk));
+    }
+    out = (typeof btoa === 'function') ? btoa(str) : b64(d);
+    return out;
+    function b64(bytes) {
+      var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/', r = '', j;
+      for (j = 0; j < bytes.length; j += 3) {
+        var b0 = bytes[j], b1 = bytes[j + 1], b2 = bytes[j + 2];
+        r += chars.charAt(b0 >> 2);
+        r += chars.charAt(((b0 & 3) << 4) | (b1 >> 4));
+        r += (j + 1 < bytes.length) ? chars.charAt(((b1 & 15) << 2) | (b2 >> 6)) : '=';
+        r += (j + 2 < bytes.length) ? chars.charAt(b2 & 63) : '=';
+      }
+      return r;
+    }
+  };
+
+  /* ---------- GIF 인코더 ---------- */
+  function GIFEncoder() {
+    this.width = 0; this.height = 0;
+    this.delay = 100;                // 1/100초 단위
+    this.repeat = 0;                 // 0 = 무한 반복
+    this.out = new ByteArray();
+    this.firstFrame = true;
+    this.sample = 10;
+    this.colorTab = null;
+    this.usedEntry = [];
+    this.colorDepth = 8;
+    this.palSize = 7;
+  }
+  GIFEncoder.prototype.setDelay = function (ms) { this.delay = Math.round(ms / 10); };
+  GIFEncoder.prototype.setRepeat = function (r) { this.repeat = r; };
+  GIFEncoder.prototype.start = function () { this.out.writeUTFBytes('GIF89a'); };
+
+  GIFEncoder.prototype.addFrame = function (rgba, w, h) {
+    if (this.firstFrame) { this.width = w; this.height = h; }
+    // RGBA → RGB
+    var count = w * h;
+    var pixels = new Array(count * 3);
+    var k = 0;
+    for (var i = 0; i < count; i++) {
+      pixels[k++] = rgba[i * 4];
+      pixels[k++] = rgba[i * 4 + 1];
+      pixels[k++] = rgba[i * 4 + 2];
+    }
+    var nq = new NeuQuant(pixels, pixels.length, this.sample);
+    nq.buildColormap();
+    this.colorTab = nq.getColormap();
+    var indexed = new Array(count);
+    for (var j = 0; j < count; j++) {
+      var index = nq.lookupRGB(pixels[j * 3] & 0xff, pixels[j * 3 + 1] & 0xff, pixels[j * 3 + 2] & 0xff);
+      this.usedEntry[index] = true;
+      indexed[j] = index;
+    }
+
+    if (this.firstFrame) {
+      this.writeLSD();
+      this.writePalette();
+      if (this.repeat >= 0) this.writeNetscapeExt();
+    }
+    this.writeGraphicCtrlExt();
+    this.writeImageDesc();
+    if (!this.firstFrame) this.writePalette();   // 프레임마다 지역 팔레트 사용
+    this.writePixels(indexed, w, h);
+    this.firstFrame = false;
+  };
+
+  GIFEncoder.prototype.writeLSD = function () {
+    this.writeShort(this.width);
+    this.writeShort(this.height);
+    this.out.writeByte(0x80 | 0x70 | 0x00 | this.palSize);  // GCT flag + color res + gct size
+    this.out.writeByte(0);   // background
+    this.out.writeByte(0);   // aspect
+  };
+  GIFEncoder.prototype.writePalette = function () {
+    this.out.writeBytes(this.colorTab);
+    var n = (3 * 256) - this.colorTab.length;
+    for (var i = 0; i < n; i++) this.out.writeByte(0);
+  };
+  GIFEncoder.prototype.writeNetscapeExt = function () {
+    this.out.writeByte(0x21);
+    this.out.writeByte(0xff);
+    this.out.writeByte(11);
+    this.out.writeUTFBytes('NETSCAPE2.0');
+    this.out.writeByte(3);
+    this.out.writeByte(1);
+    this.writeShort(this.repeat);
+    this.out.writeByte(0);
+  };
+  GIFEncoder.prototype.writeGraphicCtrlExt = function () {
+    this.out.writeByte(0x21);
+    this.out.writeByte(0xf9);
+    this.out.writeByte(4);
+    this.out.writeByte(0);   // no transparency, no disposal
+    this.writeShort(this.delay);
+    this.out.writeByte(0);
+    this.out.writeByte(0);
+  };
+  GIFEncoder.prototype.writeImageDesc = function () {
+    this.out.writeByte(0x2c);
+    this.writeShort(0);
+    this.writeShort(0);
+    this.writeShort(this.width);
+    this.writeShort(this.height);
+    if (this.firstFrame) this.out.writeByte(0);
+    else this.out.writeByte(0x80 | 0x00 | 0x00 | this.palSize);  // local color table
+  };
+  GIFEncoder.prototype.writePixels = function (indexed, w, h) {
+    var enc = new LZWEncoder(w, h, indexed, this.colorDepth);
+    enc.encode(this.out);
+  };
+  GIFEncoder.prototype.writeShort = function (v) {
+    this.out.writeByte(v & 0xff);
+    this.out.writeByte((v >> 8) & 0xff);
+  };
+  GIFEncoder.prototype.finish = function () { this.out.writeByte(0x3b); };
+  GIFEncoder.prototype.getBase64 = function () { return this.out.toBase64(); };
+
+  window.GIFEncoder = GIFEncoder;
+})();
+</script>
+<!-- Gif.html 끝 -->
+
+  <script>
+/* =========================================================
+ *  나만의 애니메이션 스튜디오 — 클라이언트 (1/2)
+ *  페이지 넘김 구조 · 서버통신 · 입장 · 학습(2쪽) · 계획(2쪽)
+ * ========================================================= */
+window.S = window.S || {};
+(function (S) {
+  'use strict';
+
+  /* ---------- 페이지 흐름 ---------- */
+  S.STEPS = ['입장', '학습', '계획', '촬영', '평가', '보드'];
+  S.FLOW = [
+    { key: 'entry',    screen: 'entry',    step: 0 },
+    { key: 'home',     screen: 'home',     step: 0 },
+    { key: 'learn1',   screen: 'learn',    sub: 0, step: 1 },
+    { key: 'learn2',   screen: 'learn',    sub: 1, step: 1 },
+    { key: 'learn3',   screen: 'learn',    sub: 2, step: 1 },
+    { key: 'learn4',   screen: 'learn',    sub: 3, step: 1 },
+    { key: 'learn5',   screen: 'learn',    sub: 4, step: 1 },
+    { key: 'plan1',    screen: 'plan',     sub: 0, step: 2 },
+    { key: 'plan2',    screen: 'plan',     sub: 1, step: 2 },
+    { key: 'capture',  screen: 'capture',  step: 3 },
+    { key: 'selfeval', screen: 'selfeval', step: 4 },
+    { key: 'board',    screen: 'board',    step: 5 }
+  ];
+  S.curIndex = 0;
+
+  /* ---------- 상태 ---------- */
+  S.state = {
+    student: null,
+    plan: { title: '', story: '', cells: ['', '', '', ''] },
+    frames: [],
+    fps: 6,
+    screen: 'entry',
+    sub: 0
+  };
+
+  /* =========================================================
+   *  서버 통신 · 연결 상태 자동 판별
+   *   0) 이 앱을 시트(Apps Script)가 직접 보여줄 때 → 그 시트에 자동 연동 · 선생님 설정 숨김
+   *   1) 학생 링크(#c=주소, 옛 ?api=주소)로 접속 → 그 시트에 연동 · 학생 모드(선생님 설정 숨김)
+   *   2) 기기에 저장된 주소 있음 → 그 시트에 연동 · 선생님 설정 보임
+   *   3) 모두 없음 → 무료 체험(데모) 모드 · 선생님 설정 보임
+   * ========================================================= */
+  S.studentLinkMode = false;
+  // 시트(Apps Script)가 이 앱을 직접 보여줄 때, 아래 자리에 그 웹 앱 주소가 채워집니다.
+  // 깃허브 정적 배포에서는 이 자리표시자가 그대로 남아, 값이 없는 것으로 봅니다.
+  S.INJECTED_URL = (function () {
+    var u = '__APPS_SCRIPT_EXEC_URL__';
+    return (typeof u === 'string' && u.indexOf('http') === 0) ? u : '';
+  })();
+  S.API = (function () {
+    if (S.INJECTED_URL) return S.INJECTED_URL;                     // 시트가 직접 서빙 → 그 시트로 자동 연결
+    var fromLink = '';
+    try {
+      var m = (location.hash || '').match(/[#&]c=([^&]*)/);
+      if (m && m[1]) fromLink = decodeURIComponent(m[1]);
+    } catch (e) {}
+    if (!fromLink) { try { fromLink = new URLSearchParams(location.search).get('api') || ''; } catch (e) {} }
+    if (fromLink) { S.studentLinkMode = true; return fromLink; }   // 학생 링크: 기기에 저장하지 않음
+    try { return localStorage.getItem('anim_api') || ''; } catch (e) { return ''; }
+  })();
+  // 시트가 직접 서빙하면 모두 같은 주소로 들어오므로, 선생님 설정을 숨긴다(학생 링크와 동일 취급).
+  if (S.INJECTED_URL) S.studentLinkMode = true;
+
+  // 시트 미연동 = 무료 체험(데모) 모드
+  S.isDemo = function () { return !S.API; };
+
+  // 학생에게 전달할 링크 (이 앱 주소 + #c=연결주소)
+  S.studentLink = function () {
+    return location.origin + location.pathname + '#c=' + encodeURIComponent(S.API || '');
+  };
+  // 선생님이 직접 연결한 주소만 기기에 저장합니다. (학생 링크는 저장하지 않음)
+  S.setApi = function (url) {
+    S.API = url || '';
+    S.studentLinkMode = false;
+    try { if (S.API) localStorage.setItem('anim_api', S.API); else localStorage.removeItem('anim_api'); } catch (e) {}
+  };
+
+  /* ---------- 데모 모드: 진행상황 로컬 저장 / 이어하기 / 완료 리셋 ---------- */
+  S.PROGRESS_APP_ID = 'anim';
+  S.progressKey = function (num) { return 'progress:' + S.PROGRESS_APP_ID + ':' + num; };
+  S.saveProgress = function () {
+    // 데모 + 로그인 상태 + '배우기'~'자기평가' 단계에서만 저장 (보드는 이어하기 대상 아님)
+    if (!S.isDemo() || !S.state.student || S.curIndex < 2 || S.state.screen === 'board') return;
+    try {
+      localStorage.setItem(S.progressKey(S.state.student.number), JSON.stringify({
+        index: S.curIndex, plan: S.state.plan, frames: S.state.frames, fps: S.state.fps,
+        selfChecks: S._selfChecks || null, selfStars: S._selfStars || null
+      }));
+    } catch (e) { /* 용량 초과 등은 조용히 넘어갑니다 */ }
+  };
+  S.loadProgress = function (num) {
+    try { return JSON.parse(localStorage.getItem(S.progressKey(num)) || 'null'); } catch (e) { return null; }
+  };
+  S.clearProgress = function (num) {
+    try { localStorage.removeItem(S.progressKey(num)); } catch (e) {}
+  };
+
+  /* ---------- 데모 모드: 완성한 '내 작품'을 이 기기에 저장/보기 ---------- */
+  S.demoWorksKey = function (num) { return 'demoWorks:' + S.PROGRESS_APP_ID + ':' + num; };
+  S.loadDemoWorks = function (num) {
+    try { return JSON.parse(localStorage.getItem(S.demoWorksKey(num)) || '[]') || []; } catch (e) { return []; }
+  };
+  S.saveDemoWork = function (num, work) {
+    var list = S.loadDemoWorks(num);
+    list.unshift(work);
+    while (list.length > 8) list.pop();                 // 기기 용량 보호: 최근 8개까지
+    try { localStorage.setItem(S.demoWorksKey(num), JSON.stringify(list)); }
+    catch (e) {                                         // 용량 초과 시 오래된 것부터 지우며 재시도
+      while (list.length > 1) {
+        list.pop();
+        try { localStorage.setItem(S.demoWorksKey(num), JSON.stringify(list)); return; } catch (e2) {}
+      }
+    }
+  };
+  S.deleteDemoWork = function (num, id) {
+    var list = S.loadDemoWorks(num).filter(function (w) { return w.id !== id; });
+    try { localStorage.setItem(S.demoWorksKey(num), JSON.stringify(list)); } catch (e) {}
+  };
+
+  // JSONP 호출: 깃허브 같은 정적 주소에서도 CORS 없이 응답을 읽는다.
+  S._jsonp = function (fn, args, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+      var cb = '__anicb' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+      var s = document.createElement('script');
+      var done = false;
+      function cleanup() {
+        try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+        if (s.parentNode) s.parentNode.removeChild(s);
+      }
+      window[cb] = function (res) {
+        if (done) return; done = true; cleanup();
+        if (res && res.ok) resolve(res.data);
+        else reject(new Error((res && res.error) || '서버에서 오류가 발생했어요.'));
+      };
+      s.onerror = function () {
+        if (done) return; done = true; cleanup();
+        reject(new Error('선생님 데이터에 연결하지 못했어요. 링크의 ?api 주소(.../exec)를 확인하세요.'));
+      };
+      setTimeout(function () {
+        if (done) return; done = true; cleanup();
+        reject(new Error('선생님 데이터 응답이 너무 늦어요. 잠시 뒤 다시 시도해 주세요.'));
+      }, timeoutMs || 20000);
+      s.src = S.API + (S.API.indexOf('?') < 0 ? '?' : '&')
+        + 'fn=' + encodeURIComponent(fn)
+        + '&args=' + encodeURIComponent(JSON.stringify(args))
+        + '&callback=' + cb;
+      document.body.appendChild(s);
+    });
+  };
+
+  S.call = function (name) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (S.API) {
+      // 인자가 작으면 JSONP(GET)로 보낸다. 정적 배포(깃허브)에서도 응답을 읽을 수 있다.
+      // 애니메이션 저장처럼 그림·GIF가 실려 큰 요청만 POST로 보낸다.
+      var payload = '';
+      try { payload = JSON.stringify(args); } catch (e) { payload = ''; }
+      if (payload && payload.length < 1500) {
+        return S._jsonp(name, args, 20000);
+      }
+      // text/plain(기본) 단순요청 → CORS 사전요청(preflight) 없이 Apps Script 호출
+      return fetch(S.API, {
+        method: 'POST',
+        redirect: 'follow',
+        body: JSON.stringify({ fn: name, args: args })
+      }).then(function (r) {
+        return r.text().then(function (t) {
+          var res;
+          try { res = JSON.parse(t); }
+          catch (e) {
+            // JSON이 아니면 보통 로그인 페이지(권한 문제)나 잘못된 주소
+            throw new Error('선생님 API 응답을 읽지 못했어요. 웹앱 배포 권한이 "모든 사용자"인지, ?api 주소가 .../exec 인지 확인하세요.');
+          }
+          if (res && res.ok) return res.data;
+          throw new Error((res && res.error) || '서버에서 오류가 발생했어요.');
+        });
+      }).catch(function (e) {
+        if (e instanceof TypeError) {
+          throw new Error('선생님 데이터에 연결하지 못했어요. 링크의 ?api 주소(.../exec)와 인터넷 연결을 확인하세요.');
+        }
+        throw e;
+      });
+    }
+    if (typeof DEMO !== 'undefined' && DEMO[name]) {
+      try { return Promise.resolve(DEMO[name].apply(null, args)); }
+      catch (e) { return Promise.reject(e); }
+    }
+    return Promise.reject(new Error('선생님이 구글 시트를 연결하면 저장돼요.'));
+  };
+
+  /* =========================================================
+   *  도우미
+   * ========================================================= */
+  S.app = function () { return document.getElementById('app'); };
+  S.esc = function (s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  };
+  S.errText = function (e) { return (e && (e.message || e.toString())) || '알 수 없는 오류'; };
+
+  S.toast = function (msg, ms) {
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.remove('hidden');
+    clearTimeout(S._toastTimer);
+    S._toastTimer = setTimeout(function () { t.classList.add('hidden'); }, ms || 2200);
+  };
+  S.loading = function (on, text) {
+    if (text) document.getElementById('loadingText').textContent = text;
+    document.getElementById('loading').classList.toggle('hidden', !on);
+  };
+  S.pushTimer = function (t) { (S._timers = S._timers || []).push(t); };
+
+  /* ---------- 페이지 렌더 ---------- */
+  S.page = function (body, opts) {
+    opts = opts || {};
+    var head = opts.head || (opts.title
+      ? '<div class="page__head"><h1 class="page__title">' + opts.title + '</h1>' +
+        (opts.sub ? '<p class="page__sub">' + opts.sub + '</p>' : '') + '</div>'
+      : '');
+    S.app().innerHTML = '<div class="page dir-' + (S._dir || 'next') + '">' +
+      head + '<div class="page__body">' + body + '</div></div>';
+  };
+
+  /* ---------- 아래 이동 바 ---------- */
+  S.setNav = function (cfg) {
+    var nav = document.getElementById('navbar');
+    cfg = cfg || {};
+    if (!cfg.back && !cfg.next && !cfg.center) { nav.classList.add('hidden'); nav.innerHTML = ''; return; }
+    nav.classList.remove('hidden');
+    var left = cfg.back ? '<button class="btn ghost" id="navBack">' + cfg.back.label + '</button>' : '<span></span>';
+    var center = '<div class="nav-center">' + (cfg.center || '') + '</div>';
+    var right = cfg.next ? '<button class="btn ' + (cfg.next.cls || 'accent') + '" id="navNext"' + (cfg.next.disabled ? ' disabled' : '') + '>' + cfg.next.label + '</button>' : '<span></span>';
+    nav.innerHTML = left + center + right;
+    if (cfg.back) document.getElementById('navBack').onclick = cfg.back.fn;
+    if (cfg.next) document.getElementById('navNext').onclick = cfg.next.fn;
+  };
+  S.setNextDisabled = function (b) { var n = document.getElementById('navNext'); if (n) n.disabled = b; };
+
+  /* ---------- 상단 바 ---------- */
+  S.renderTopbar = function (step) {
+    var bar = document.getElementById('topbar');
+    if (!S.state.student) { bar.classList.add('hidden'); return; }
+    bar.classList.remove('hidden');
+    document.getElementById('whoami').textContent = '👋 ' + S.state.student.name;
+    document.getElementById('stepDots').innerHTML = S.STEPS.map(function (lbl, i) {
+      var cls = 'step-dot' + (i === step ? ' active' : (i < step ? ' done' : ''));
+      return '<span class="' + cls + '">' + (i < step ? '✓' : (i + 1)) + '<span class="lbl"> ' + lbl + '</span></span>';
+    }).join('');
+  };
+  S.bindTopbar = function () {
+    document.getElementById('homeBtn').onclick = function () { S.go(S.state.student ? 'home' : 'entry'); };
+    document.getElementById('boardBtn').onclick = function () { S.go('board'); };
+    // 선생님 메뉴는 시작 화면의 '입장하기' 버튼 아래에서 엽니다.
+    var sb = document.getElementById('settingsBtn');   // 이전 버전 호환
+    if (sb) sb.onclick = function () { S.adminSidebar(); };
+  };
+
+  /* ---------- 이동 ---------- */
+  S.gotoIndex = function (i, dir) {
+    if (i < 0 || i >= S.FLOW.length) return;
+    var f = S.FLOW[i];
+    if (f.screen !== 'entry' && !S.state.student) { i = 0; f = S.FLOW[0]; }
+    S.curIndex = i;
+    S.state.screen = f.screen; S.state.sub = f.sub || 0;
+    S._dir = dir || 'next';
+    if (S.stopPlayers) S.stopPlayers();
+    S.renderTopbar(f.step);
+    window.scrollTo(0, 0);
+    switch (f.screen) {
+      case 'entry':    S.screenEntry(); break;
+      case 'home':     S.screenHome(); break;
+      case 'learn':    S.screenLearn(f.sub || 0); break;
+      case 'plan':     S.screenPlan(f.sub || 0); break;
+      case 'capture':  S.screenCapture(); break;
+      case 'selfeval': S.screenSelfEval(); break;
+      case 'board':    S.screenBoard(); break;
+    }
+    S.saveProgress();   // 데모 모드면 현재 단계+입력값을 이 기기에 저장 (이어하기용)
+  };
+  S.next = function () { S.gotoIndex(S.curIndex + 1, 'next'); };
+  S.prev = function () { S.gotoIndex(S.curIndex - 1, 'prev'); };
+  S.gotoKey = function (key, dir) {
+    for (var i = 0; i < S.FLOW.length; i++) if (S.FLOW[i].key === key) { S.gotoIndex(i, dir); return; }
+  };
+  S.go = function (screen) {
+    for (var i = 0; i < S.FLOW.length; i++) if (S.FLOW[i].screen === screen) {
+      S.gotoIndex(i, i >= S.curIndex ? 'next' : 'prev'); return;
+    }
+  };
+
+  /* ---------- 이미지: 사진 → 작은 컷 ---------- */
+  S.fileToFrame = function (file, maxW) {
+    maxW = maxW || 480;
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(S.dataUrlToFrame(reader.result, maxW)); };
+      reader.onerror = function () { reject(new Error('사진을 읽지 못했어요.')); };
+      reader.readAsDataURL(file);
+    });
+  };
+  S.dataUrlToFrame = function (dataUrl, maxW) {
+    maxW = maxW || 480;
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () {
+        var scale = Math.min(1, maxW / img.width);
+        var w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(cv.toDataURL('image/jpeg', 0.55));
+      };
+      img.onerror = function () { reject(new Error('사진을 처리하지 못했어요.')); };
+      img.src = dataUrl;
+    });
+  };
+  S.makeThumb = function (dataUrl, size) {
+    size = size || 150;
+    return new Promise(function (resolve) {
+      var img = new Image();
+      img.onload = function () {
+        var scale = size / Math.max(img.width, img.height);
+        var w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(cv.toDataURL('image/jpeg', 0.5));
+      };
+      img.onerror = function () { resolve(dataUrl); };
+      img.src = dataUrl;
+    });
+  };
+
+  /* =========================================================
+   *  ⓪ 선생님 설정 — 단계별 안내 (학생은 보지 않습니다)
+   *     1 시트 준비 → 2 웹앱 배포 → 3 주소 연결 → 4 학생 링크 배포
+   * ========================================================= */
+  // 선생님들이 사본을 떠 가는 '원본 데이터 시트' 주소 (배포 시 본인 템플릿 주소로 바꾸세요)
+  S.TEMPLATE_URL = 'https://docs.google.com/spreadsheets/d/1xG77IJVL32_N-a38k9S7pZLc_jgIJxmqvN55bR-IP54/edit';
+
+  S.copyToClip = function (inputEl) {
+    inputEl.focus(); inputEl.select();
+    var done = function () { S.toast('링크를 복사했어요 📋'); };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(inputEl.value).then(done, function () { document.execCommand('copy'); done(); });
+      } else { document.execCommand('copy'); done(); }
+    } catch (e) { S.toast('복사가 안 되면 길게 눌러 직접 복사하세요'); }
+  };
+
+  S.screenSetup = function (step) {
+    S.setNav({});
+    document.getElementById('topbar').classList.add('hidden');
+    var s = (typeof step === 'number') ? step : (S.API ? 4 : 1);
+
+    var labels = ['시트 준비', '웹앱 배포', '주소 연결', '링크 주기'];
+    var dots = '<div class="setup-steps">';
+    for (var i = 1; i <= 4; i++) {
+      dots += '<span class="sstep' + (i === s ? ' on' : (i < s ? ' done' : '')) + '">' +
+        (i < s ? '✓' : i) + '<span class="lbl"> ' + labels[i - 1] + '</span></span>';
+    }
+    dots += '</div>';
+
+    var card = '';
+    if (s === 1) {
+      card =
+        '<p class="setup-hint">👧 학생이라면 선생님이 준 <b>주소(링크)</b>로 들어오세요. 이 화면은 <b>선생님 설정용</b>이에요.</p>' +
+        '<h2>1단계 · 데이터 시트 준비</h2>' +
+        '<p>학생 명단과 작품이 저장될 <b>나만의 데이터 시트</b>를 만듭니다.</p>' +
+        '<ol class="setup-list">' +
+          '<li>아래 <b>[템플릿 시트 열기]</b> 를 누르세요.</li>' +
+          '<li>열린 시트에서 <b>[파일] → [사본 만들기]</b> 를 누르세요. (내 드라이브에 저장됩니다)</li>' +
+        '</ol>' +
+        '<div class="btn-row"><a class="btn" href="' + S.TEMPLATE_URL + '" target="_blank" rel="noopener">📄 템플릿 시트 열기</a></div>' +
+        '<div class="setup-nav"><button class="btn ghost" id="bClose">✖ 닫기</button><button class="btn accent" id="bNext">다음 ▶</button></div>';
+    } else if (s === 2) {
+      card =
+        '<h2>2단계 · 웹 앱으로 배포</h2>' +
+        '<p>방금 만든 <b>사본 시트</b>에서 차례대로 누르세요.</p>' +
+        '<ol class="setup-list">' +
+          '<li>상단 <b>[확장 프로그램] → [Apps Script]</b></li>' +
+          '<li>오른쪽 위 <b>[배포] → [새 배포]</b></li>' +
+          '<li>유형(⚙️ 톱니바퀴) → <b>[웹 앱]</b> 선택</li>' +
+          '<li>실행 대상 <b>나</b> · 액세스 권한 <b>모든 사용자</b></li>' +
+          '<li><b>[배포]</b> → (권한 승인) → <b>웹 앱 URL(…/exec) 복사</b></li>' +
+        '</ol>' +
+        '<div class="setup-nav"><button class="btn ghost" id="bPrev">◀ 이전</button><button class="btn accent" id="bNext">다음 ▶</button></div>';
+    } else if (s === 3) {
+      card =
+        '<h2>3단계 · 주소 연결</h2>' +
+        '<p>복사한 <b>웹 앱 주소(…/exec)</b> 를 붙여넣고 연결하세요.</p>' +
+        '<input type="text" id="apiInput" placeholder="https://script.google.com/macros/s/…/exec" value="' + S.esc(S.API || '') + '">' +
+        '<div id="apiErr" class="setup-err"></div>' +
+        '<div class="setup-nav"><button class="btn ghost" id="bPrev">◀ 이전</button><button class="btn green" id="bConnect">🔗 연결하기</button></div>';
+    } else {
+      card =
+        '<h2>4단계 · 학생에게 링크 주기 ✅</h2>' +
+        '<p>연결 완료! 아래 <b>학생용 주소</b>를 학생들에게 나눠주세요. 학생은 이 주소만 열면 <b>이름 선택 화면</b>이 바로 나옵니다.</p>' +
+        '<input type="text" id="studentLink" readonly value="' + S.esc(S.studentLink()) + '" onclick="this.select()">' +
+        '<div class="btn-row" style="margin-top:.5rem;"><button class="btn" id="bCopy">📋 학생 링크 복사</button></div>' +
+        '<div class="setup-nav"><button class="btn ghost" id="bPrev">◀ 주소 다시 입력</button><button class="btn accent" id="bStart">앱 미리보기 ▶</button></div>';
+    }
+
+    S.page('<div class="center-col" style="justify-content:flex-start;overflow-y:auto;">' + dots +
+      '<div class="card setup-card">' + card + '</div></div>',
+      { title: '👩‍🏫 선생님 설정' });
+
+    if (s === 1) {
+      document.getElementById('bClose').onclick = function () { S.gotoKey('entry', 'next'); };
+      document.getElementById('bNext').onclick = function () { S.screenSetup(2); };
+    } else if (s === 2) {
+      document.getElementById('bPrev').onclick = function () { S.screenSetup(1); };
+      document.getElementById('bNext').onclick = function () { S.screenSetup(3); };
+    } else if (s === 3) {
+      document.getElementById('bPrev').onclick = function () { S.screenSetup(2); };
+      document.getElementById('bConnect').onclick = function () {
+        var v = (document.getElementById('apiInput').value || '').trim();
+        var err = document.getElementById('apiErr');
+        if (!/^https:\/\/.+\/exec(\?.*)?$/.test(v)) { err.textContent = '…/exec 로 끝나는 주소를 붙여넣어 주세요.'; return; }
+        S.setApi(v);
+        err.textContent = '';
+        S.loading(true, '연결을 확인하는 중…');
+        S.call('apiGetConfig').then(function () { S.loading(false); S.screenSetup(4); })
+          .catch(function (e) { S.loading(false); err.textContent = '연결 실패: ' + S.errText(e); });
+      };
+    } else {
+      document.getElementById('bPrev').onclick = function () { S.screenSetup(3); };
+      document.getElementById('bCopy').onclick = function () { S.copyToClip(document.getElementById('studentLink')); };
+      document.getElementById('bStart').onclick = function () { S.gotoKey('entry', 'next'); };
+    }
+  };
+
+  /* =========================================================
+   *  ① 입장
+   * ========================================================= */
+  S.screenEntry = function () {
+    S.setNav({});
+    S.loading(true, '명단을 불러오는 중…');
+    S.call('apiGetRoster').then(function (roster) {
+      S.loading(false);
+      if (!roster || roster.length === 0) {
+        S.page(
+          '<div class="center-col"><div class="logo">🎬</div>' +
+          '<div class="card" style="text-align:center;max-width:34rem;">' +
+            (S.studentLinkMode
+              ? '<p style="font-size:1.2rem;">아직 학생 명단이 없어요.<br>선생님께 알려 주세요.</p>'
+              : '<p style="font-size:1.2rem;">아직 학생 명단이 없어요.<br>아래 <b>선생님 메뉴</b>에서 명단을 넣어 주세요.</p>' +
+                '<button class="btn ghost sm" onclick="S.adminSidebar()">선생님 메뉴 열기</button>') +
+          '</div></div>',
+          { title: '나만의 애니메이션 스튜디오' }
+        );
+        document.getElementById('topbar').classList.remove('hidden');
+        document.getElementById('whoami').textContent = '';
+        document.getElementById('stepDots').innerHTML = '';
+        return;
+      }
+      // 번호 순으로 정렬
+      var sorted = roster.slice().sort(function (a, b) { return (Number(a.number) || 0) - (Number(b.number) || 0); });
+      var options = sorted.map(function (st, i) {
+        return '<option value="' + i + '">' + S.esc(st.number) + '번 · ' + S.esc(st.name) + '</option>';
+      }).join('');
+      S.page(
+        '<div class="center-col">' +
+          '<div class="logo">🎬</div>' +
+          '<div class="card" style="width:100%;max-width:32rem;text-align:center;">' +
+            '<label class="field" style="text-align:left;">이름 선택</label>' +
+            '<select id="nameSelect">' +
+              '<option value="" disabled selected>— 내 이름을 골라주세요 —</option>' + options +
+            '</select>' +
+            '<button class="btn big" id="enterBtn" style="margin-top:1.1rem;width:100%;" disabled>입장하기 ▶</button>' +
+            (S.studentLinkMode ? '' :
+              '<div style="margin-top:.6rem;"><button class="btn ghost sm" id="teacherMenuBtn">선생님 메뉴</button></div>') +
+            (S.isDemo() ? '<p class="page__sub" style="margin:.4rem 0 0;">무료 체험 중이에요. 활동은 이 기기에 저장되어 다음에 이어서 할 수 있어요.</p>' : '') +
+          '</div>' +
+        '</div>',
+        { title: '나만의 애니메이션 스튜디오', sub: '내 이름을 골라 입장해요! 명단에서 자기 이름을 선택하세요' }
+      );
+      document.getElementById('topbar').classList.remove('hidden');
+      document.getElementById('whoami').textContent = '';
+      document.getElementById('stepDots').innerHTML = '';
+      var tMenu = document.getElementById('teacherMenuBtn');
+      if (tMenu) tMenu.onclick = function () { S.adminSidebar(); };
+
+      var sel = document.getElementById('nameSelect');
+      var btn = document.getElementById('enterBtn');
+      // 이전에 고른 이름이 있으면 미리 선택해 둠 (자기 기기면 바로 입장)
+      if (S.state.student) {
+        for (var k = 0; k < sorted.length; k++) {
+          var m = sorted[k];
+          if (String(m.id) === String(S.state.student.id) ||
+              (String(m.name) === String(S.state.student.name) && String(m.number) === String(S.state.student.number))) {
+            sel.value = String(k); btn.disabled = false; break;
+          }
+        }
+      }
+      sel.onchange = function () { btn.disabled = (sel.value === ''); };
+      var enter = function () {
+        if (sel.value === '') { S.toast('먼저 이름을 골라주세요 🙂'); return; }
+        var st = sorted[parseInt(sel.value, 10)];
+        S.state.student = { id: st.id, name: st.name, number: st.number };
+        localStorage.setItem('anim_student', JSON.stringify(S.state.student));
+        // 데모 모드: 저장된 진행이 있으면 그 단계부터 이어서, 없으면 처음부터
+        if (S.isDemo()) {
+          var prog = S.loadProgress(st.number);
+          if (prog && prog.index >= 2) {
+            S.state.plan = prog.plan || S.state.plan;
+            S.state.frames = prog.frames || [];
+            S.state.fps = prog.fps || 6;
+            S._selfChecks = prog.selfChecks || null;
+            S._selfStars = prog.selfStars || null;
+            S.toast(st.name + '님, 이어서 시작해요! ▶');
+            S.gotoIndex(prog.index, 'next');
+            return;
+          }
+        }
+        S.toast(st.name + '님, 환영해요! 🎉');
+        S.gotoKey('home', 'next');
+      };
+      btn.onclick = enter;
+    }).catch(function (e) {
+      S.loading(false);
+      S.page('<div class="center-col"><div class="card"><h2>이런!</h2><p>' + S.esc(S.errText(e)) +
+        '</p><button class="btn" onclick="S.go(\'entry\')">다시 시도</button></div></div>', { title: '문제가 생겼어요' });
+    });
+  };
+
+  /* =========================================================
+   *  여정 홈 (카드형 허브)
+   * ========================================================= */
+  S.screenHome = function () {
+    S.setNav({});
+    document.getElementById('stepDots').innerHTML = '';
+    var name = S.state.student ? S.state.student.name : '친구';
+    var render = function (works, hearts) {
+      var medals = works > 0 ? 1 : 0;
+      var head =
+        '<div class="home__head">' +
+          '<div class="mascot">🎬</div>' +
+          '<div class="home__hi">' +
+            '<div class="home__title">나만의 애니메이션 스튜디오</div>' +
+            '<div class="home__greet">안녕, <b>' + S.esc(name) + '</b> 감독님!</div>' +
+          '</div>' +
+          '<div class="badges">' +
+            badge('🎬', '내 작품', works) + badge('❤️', '받은 하트', hearts) + badge('🏅', '메달', medals) +
+          '</div>' +
+        '</div>';
+      S.page(
+        '<div class="hub-row">' +
+          hub(1, 'orange', '📚', '애니메이션 배우기', '원리와 만드는 법을 알아봐요', 'learn1') +
+          '<div class="hub-arrow">→</div>' +
+          hub(2, 'green', '🎥', '나만의 애니 만들기', '계획하고 사진 찍어 영상으로!', 'plan1') +
+          '<div class="hub-arrow">→</div>' +
+          hub(3, 'yellow', '🖼️', '친구 작품 보드', '감상하고 하트·댓글로 응원해요', 'board') +
+        '</div>' +
+        '<div class="home__hint">💡 1 → 2 차례로 만들고, 3 보드에서 친구들과 작품을 함께 봐요!</div>',
+        { head: head }
+      );
+      Array.prototype.forEach.call(document.querySelectorAll('.hub-start'), function (b) {
+        b.onclick = function () { S.gotoKey(b.dataset.go, 'next'); };
+      });
+    };
+    render(0, 0);
+    if (S.isDemo()) {
+      var mineWorks = S.state.student ? S.loadDemoWorks(S.state.student.number) : [];
+      render(mineWorks.length, 0);
+    } else {
+      S.call('apiListAnimations').then(function (list) {
+        var mine = (list || []).filter(function (a) { return S.state.student && a.studentId === S.state.student.id; });
+        var hearts = mine.reduce(function (s, a) { return s + (a.hearts || 0); }, 0);
+        if (S.state.screen === 'home') render(mine.length, hearts);
+      }).catch(function () {});
+    }
+
+    function badge(ic, label, val) {
+      return '<div class="badge">' + ic + ' <span class="v">' + val + '</span><span class="l">' + label + '</span></div>';
+    }
+    function hub(n, color, icon, title, sub, go) {
+      return '<div class="hub-card ' + color + '"><span class="hub-num">' + n + '</span>' +
+        '<div class="hub-icon">' + icon + '</div><div class="hub-title">' + title + '</div>' +
+        '<div class="hub-sub">' + sub + '</div>' +
+        '<button class="hub-start" data-go="' + go + '">시작하기 →</button></div>';
+    }
+  };
+
+  /* =========================================================
+   *  ② 학습 (설명 4쪽 + 플립 4단계 1쪽 = 5쪽)
+   * ========================================================= */
+  S.LEARN_FACTS = [
+    { emoji: '👁️', title: '① 잔상 효과', paras: [
+        '우리 눈은 한 번 본 그림을 약 <b>1/16초</b> 동안 기억해요. 이것을 <b>잔상 효과</b>라고 해요.',
+        '그래서 조금씩 다른 그림을 빠르게 이어서 보여주면, 눈이 그 사이를 스스로 메워서 <b>“움직인다”</b>고 느껴요.',
+        '옛날에는 새와 새장을 동전 양면에 그려 빙글빙글 돌렸더니, 새가 새장 안에 들어간 것처럼 보였대요. (소마트로프)'
+      ], tip: '애니메이션은 마술이 아니라, 우리 눈의 성질을 똑똑하게 이용한 거예요!' },
+    { emoji: '🖼️', title: '② 컷(프레임)', paras: [
+        '애니메이션은 사진(그림) <b>여러 장</b>으로 만들어져요. 그 한 장 한 장을 <b>컷</b> 또는 <b>프레임</b>이라고 불러요.',
+        '각 컷은 바로 앞 컷과 <b>아주 조금만</b> 달라야 해요. 많이 달라지면 화면이 뚝뚝 끊겨 보여요.',
+        '예를 들어 팔을 드는 장면이라면, 팔을 조금씩 위로 올린 컷을 여러 장 찍으면 돼요.'
+      ], tip: '“조금씩, 여러 장”이 가장 중요한 비밀이에요.' },
+    { emoji: '⚡', title: '③ 속도 (컷/초)', paras: [
+        '1초에 컷을 <b>몇 장</b> 보여줄지를 <b>fps(초당 프레임 수)</b>라고 해요.',
+        '컷이 많을수록(빠를수록) 더 <b>부드럽게</b>, 적을수록 <b>통통 튀는</b> 느낌이 나요.',
+        '우리 앱에서는 🐢~🐇 막대로 1초에 <b>2~15장</b>까지 정할 수 있어요. 보통 <b>6~8장</b>이면 좋아요.'
+      ], tip: '같은 사진이라도 속도를 바꾸면 느낌이 확 달라져요.' },
+    { emoji: '📒', title: '④ 플립북', paras: [
+        '공책 귀퉁이마다 조금씩 다른 그림을 그리고 <b>촤르륵</b> 넘기면 그림이 움직여요. 이것이 <b>플립북</b>이에요.',
+        '우리는 그림 대신 <b>사진</b>을 찍어서 “디지털 플립북”을 만들 거예요.',
+        '인형·블록·점토·종이 그림을 <b>조금씩 움직이며</b> 한 컷씩 사진을 찍으면 멋진 애니메이션이 완성돼요!'
+      ], tip: '다음 쪽에서 우리가 만들 4단계를 살펴봐요 →' }
+  ];
+
+  S.screenLearn = function (sub) {
+    var TOTAL = 5;
+    if (sub < 4) {
+      var f = S.LEARN_FACTS[sub];
+      S.page(
+        '<div class="fact-page">' +
+          '<div class="fact-visual"><div class="fact-emoji">' + f.emoji + '</div></div>' +
+          '<div class="fact-text">' +
+            f.paras.map(function (p) { return '<p>' + p + '</p>'; }).join('') +
+            '<div class="fact-tip">💡 ' + f.tip + '</div>' +
+          '</div>' +
+        '</div>',
+        { title: f.title + ' ' + f.emoji }
+      );
+      S.setNav({
+        back: sub === 0 ? { label: '🏠 홈', fn: function () { S.go('home'); } } : { label: '◀ 이전', fn: S.prev },
+        center: (sub + 1) + ' / ' + TOTAL,
+        next: { label: '다음 ▶', fn: S.next }
+      });
+    } else {
+      S.page(
+        '<div class="flip-layout">' +
+          '<div class="flip-left">' +
+            '<div id="flipStage" class="flip-stage">🙂</div>' +
+            '<button class="btn" id="playFlip">▶ 움직임 미리보기</button>' +
+          '</div>' +
+          '<div class="flip-right"><ol class="toc">' +
+            step(1, '📝', '계획 세우기', '이야기를 정하고 컷을 나눠요') +
+            step(2, '📸', '사진 찍기', '조금씩 움직이며 한 컷씩 찍어요') +
+            step(3, '🎞️', '컷 이어붙이기', '순서대로 놓고 속도를 정해요') +
+            step(4, '🖼️', '함께 감상', '보드에 올려 친구들과 봐요') +
+          '</ol></div>' +
+        '</div>',
+        { title: '플립 애니메이션 4단계 🎞️' }
+      );
+      var faces = ['🙂', '😊', '😄', '😁', '😆', '😄', '😊', '🙂'];
+      var stage = document.getElementById('flipStage');
+      var fi = 0, timer = null;
+      document.getElementById('playFlip').onclick = function () {
+        if (timer) { clearInterval(timer); timer = null; this.textContent = '▶ 움직임 미리보기'; return; }
+        this.textContent = '⏸ 멈추기';
+        timer = setInterval(function () { fi = (fi + 1) % faces.length; stage.textContent = faces[fi]; }, 150);
+        S.pushTimer(timer);
+      };
+      Array.prototype.forEach.call(document.querySelectorAll('.toc li'), function (li) {
+        li.onclick = function () {
+          Array.prototype.forEach.call(document.querySelectorAll('.toc li'), function (x) { x.classList.remove('active'); });
+          li.classList.add('active');
+          stage.textContent = li.dataset.emoji;
+        };
+      });
+      S.setNav({
+        back: { label: '◀ 이전', fn: S.prev },
+        center: '5 / ' + TOTAL,
+        next: { label: '내 계획 세우기 ▶', fn: S.next }
+      });
+    }
+
+    function step(n, emoji, title, desc) {
+      return '<li data-emoji="' + emoji + '"><span class="n">' + n + '</span>' +
+        '<span class="toc-txt"><span class="t">' + emoji + ' ' + title + '</span>' +
+        '<span class="d">' + desc + '</span></span></li>';
+    }
+  };
+
+  /* =========================================================
+   *  ③ 계획 (2쪽)
+   * ========================================================= */
+  S.screenPlan = function (sub) {
+    var p = S.state.plan;
+    if (sub === 0) {
+      S.page(
+        '<div class="center-col" style="justify-content:flex-start;">' +
+          '<div class="card" style="width:100%;max-width:40rem;">' +
+            '<label class="field">🎬 작품 제목</label>' +
+            '<input type="text" id="planTitle" maxlength="40" placeholder="예) 점프하는 우리 강아지" value="' + S.esc(p.title) + '">' +
+            '<label class="field">📖 어떤 이야기인가요? (무엇이 어떻게 움직이나요)</label>' +
+            '<textarea id="planStory" rows="4" maxlength="300" placeholder="예) 강아지가 앉아 있다가 점점 일어나 폴짝 뛴다.">' + S.esc(p.story) + '</textarea>' +
+          '</div>' +
+        '</div>',
+        { title: '애니메이션 계획 📝', sub: '제목과 이야기를 정해요' }
+      );
+      document.getElementById('planTitle').oninput = function () { p.title = this.value; };
+      document.getElementById('planStory').oninput = function () { p.story = this.value; };
+      S.setNav({
+        back: { label: '◀ 이전', fn: S.prev },
+        center: '1 / 2 쪽',
+        next: { label: '컷 짜기 ▶', fn: function () {
+          p.title = (document.getElementById('planTitle').value || '').trim();
+          p.story = (document.getElementById('planStory').value || '').trim();
+          if (!p.title) { S.toast('작품 제목을 먼저 정해주세요 🙂'); document.getElementById('planTitle').focus(); return; }
+          S.next();
+        } }
+      });
+    } else {
+      if (!p.cells.length) p.cells = ['', '', '', ''];
+      S.page(
+        '<div class="scroll-area"><div class="storyboard" id="sbGrid"></div>' +
+          '<div class="btn-row" style="margin-top:.8rem;justify-content:center;">' +
+            '<button class="btn ghost" id="addCell">➕ 컷 추가</button>' +
+            '<span class="page__sub" id="cellCount"></span>' +
+          '</div></div>',
+        { title: '컷 계획 (스토리보드) 🗂️', sub: '컷마다 어떤 장면을 찍을지 적어요' }
+      );
+      drawCells();
+      document.getElementById('addCell').onclick = function () { p.cells.push(''); drawCells(); };
+      S.setNav({
+        back: { label: '◀ 이전', fn: S.prev },
+        center: '2 / 2 쪽',
+        next: { label: '촬영하러 가기 📸', fn: S.next }
+      });
+    }
+
+    function drawCells() {
+      var grid = document.getElementById('sbGrid');
+      grid.innerHTML = p.cells.map(function (c, i) {
+        return '<div class="sb-cell"><div class="sb-num"><span>컷 ' + (i + 1) + '</span>' +
+          (p.cells.length > 1 ? '<button class="del" data-del="' + i + '">✕ 삭제</button>' : '') + '</div>' +
+          '<textarea data-cell="' + i + '" rows="3" maxlength="120" placeholder="이 컷의 장면">' + S.esc(c) + '</textarea></div>';
+      }).join('');
+      document.getElementById('cellCount').textContent = '계획한 컷: ' + p.cells.length + '개';
+      Array.prototype.forEach.call(grid.querySelectorAll('textarea'), function (ta) {
+        ta.oninput = function () { p.cells[parseInt(ta.dataset.cell, 10)] = ta.value; };
+      });
+      Array.prototype.forEach.call(grid.querySelectorAll('[data-del]'), function (b) {
+        b.onclick = function () { p.cells.splice(parseInt(b.dataset.del, 10), 1); drawCells(); };
+      });
+    }
+  };
+
+  /* ---------- 부팅 공통 ---------- */
+  S.bootCommon = function () {
+    var saved = localStorage.getItem('anim_student');
+    if (saved) { try { S.state.student = JSON.parse(saved); } catch (e) {} }
+    S.bindTopbar();
+  };
+
+})(window.S);
+</script>
+<!-- App.html 끝 -->
+
+  <script>
+/* =========================================================
+ *  나만의 애니메이션 스튜디오 — 클라이언트 (2/2)
+ *  촬영 · 자기평가 · 보드 · 감상 · 선생님 설정 · 미리보기 모의데이터
+ * ========================================================= */
+(function (S) {
+  'use strict';
+
+  /* ---------- 영상 재생기 ---------- */
+  S._timers = [];
+  S._camStream = null;     // 앱 시작 때 한 번 받은 카메라 스트림을 세션 내내 재사용합니다(권한 1회).
+  S.stopPlayers = function () {
+    (S._timers || []).forEach(function (t) { clearInterval(t); });
+    S._timers = [];
+    // 카메라는 끄지 않습니다 — 화면을 옮길 때마다 권한을 다시 묻지 않도록 유지합니다.
+  };
+  S.stopPlayersKeepCamera = function () {
+    (S._timers || []).forEach(function (t) { clearInterval(t); });
+    S._timers = [];
+  };
+  function fit(ctx, cv, img) {
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height);
+    if (!img || !img.width) return;
+    var s = Math.min(cv.width / img.width, cv.height / img.height);
+    var w = img.width * s, h = img.height * s;
+    ctx.drawImage(img, (cv.width - w) / 2, (cv.height - h) / 2, w, h);
+  }
+  S.playOn = function (canvas, frames, fps) {
+    if (!canvas || !frames || !frames.length) return;
+    canvas.width = 480; canvas.height = 360;
+    var ctx = canvas.getContext('2d');
+    var imgs = frames.map(function (src) { var im = new Image(); im.src = src; return im; });
+    var i = 0;
+    var tick = function () { fit(ctx, canvas, imgs[i]); i = (i + 1) % imgs.length; };
+    tick();
+    S.pushTimer(setInterval(tick, 1000 / Math.max(1, fps)));
+  };
+
+  /* 컷들을 재생되는 GIF(dataURL)로 만듭니다. 선생님 드라이브에 이 파일이 저장됩니다.
+     GIFEncoder 는 Gif.html 에 내장(외부 CDN 없음). 실패하면 빈 문자열을 돌려줍니다. */
+  S.buildGif = function (frames, fps) {
+    return new Promise(function (resolve, reject) {
+      if (typeof GIFEncoder === 'undefined' || !frames || !frames.length) { resolve(''); return; }
+      var imgs = new Array(frames.length), loaded = 0;
+      frames.forEach(function (src, i) {
+        var im = new Image();
+        im.onload = im.onerror = function () { imgs[i] = im; if (++loaded === frames.length) build(); };
+        im.src = src;
+      });
+      function build() {
+        try {
+          var base = null;
+          for (var i = 0; i < imgs.length; i++) { if (imgs[i] && imgs[i].width) { base = imgs[i]; break; } }
+          if (!base) { resolve(''); return; }
+          var maxW = 240;
+          var scale = Math.min(1, maxW / base.width);
+          var w = Math.max(1, Math.round(base.width * scale));
+          var h = Math.max(1, Math.round(base.height * scale));
+          var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+          var ctx = cv.getContext('2d');
+          var enc = new GIFEncoder();
+          enc.setRepeat(0); enc.setDelay(1000 / Math.max(1, fps)); enc.start();
+          imgs.forEach(function (im) {
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+            if (im && im.width) {
+              var s = Math.min(w / im.width, h / im.height);
+              var iw = im.width * s, ih = im.height * s;
+              ctx.drawImage(im, (w - iw) / 2, (h - ih) / 2, iw, ih);
+            }
+            enc.addFrame(ctx.getImageData(0, 0, w, h).data, w, h);
+          });
+          enc.finish();
+          resolve('data:image/gif;base64,' + enc.getBase64());
+        } catch (e) { reject(e); }
+      }
+    });
+  };
+
+  function renderStars(node, value, onset) {
+    if (!node) return;
+    function paint() {
+      node.innerHTML = '';
+      for (var s = 1; s <= 5; s++) {
+        var sp = document.createElement('span');
+        sp.className = 'star' + (s <= value ? ' on' : '');
+        sp.textContent = '★';
+        (function (n) { sp.onclick = function () { value = n; onset(n); paint(); }; })(s);
+        node.appendChild(sp);
+      }
+    }
+    paint();
+  }
+
+  /* =========================================================
+   *  ④ 촬영 스튜디오 (촬영 / 미리보기 탭)
+   * ========================================================= */
+  S.screenCapture = function () {
+    S.page(
+      '<div class="tabbar">' +
+        '<button class="tab active" data-tab="shoot">📸 촬영</button>' +
+        '<button class="tab" data-tab="preview">▶ 미리보기</button>' +
+      '</div>' +
+      '<div class="cap-wrap" id="capShoot">' +
+        '<div class="shoot-split">' +
+          '<div class="cap-stage">' +
+            '<div class="capture-box">' +
+              '<video id="cam" autoplay playsinline muted></video>' +
+              '<div id="capEmpty" class="capture-empty hidden">📷 “찰칵!”을 눌러<br>카메라로 촬영하세요</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="shoot-side">' +
+            '<div class="shoot-actions">' +
+              '<button class="btn green" id="shotBtn">📸 찰칵!</button>' +
+              '<label class="btn ghost sm">🖼️ 가져오기' +
+                '<input type="file" id="fileInput" accept="image/*" capture="environment" multiple class="hidden">' +
+              '</label>' +
+            '</div>' +
+            '<div class="shoot-strip-label">🎞️ 찍은 컷 <span id="capPageInd" class="page__sub" style="margin:0;"></span></div>' +
+            '<div class="shoot-strip-nav">' +
+              '<button class="navarrow" id="stripPrev" title="이전 컷 보기">◀</button>' +
+              '<div class="frames-strip" id="strip"></div>' +
+              '<button class="navarrow" id="stripNext" title="다음 컷 보기">▶</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cap-wrap hidden" id="capPreview">' +
+        '<canvas id="preview" class="player-canvas"></canvas>' +
+        '<div class="speed-row"><span>🐢</span><input type="range" id="fps" min="2" max="15" step="1" value="' + S.state.fps + '">' +
+          '<span>🐇</span><b id="fpsVal" style="font-size:1.1rem;min-width:5rem;text-align:right;">' + S.state.fps + ' 컷/초</b></div>' +
+      '</div>',
+      { title: '사진 찍어 영상 만들기 📸' }
+    );
+
+    S._capTab = 'shoot';
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+      t.onclick = function () { S.captureTab(t.dataset.tab); };
+    });
+
+    S._capStart = 0;                      // 보이는 8컷 창의 시작 위치. 화살표로 한 컷씩 밀며 봅니다
+    S.initCamera();
+    S.drawFrames();
+
+    document.getElementById('shotBtn').onclick = S.shoot;
+    document.getElementById('fileInput').onchange = function (e) {
+      var files = Array.prototype.slice.call(e.target.files || []);
+      if (!files.length) return;
+      S.loading(true, '사진을 넣는 중…');
+      files.reduce(function (chain, f) {
+        return chain.then(function () { return S.fileToFrame(f).then(function (fr) { S.state.frames.push(fr); }); });
+      }, Promise.resolve()).then(function () {
+        S.loading(false); S.afterFrameChange(); S.toast('컷 ' + files.length + '장 추가! 📥'); e.target.value = '';
+      }).catch(function (err) { S.loading(false); S.toast(S.errText(err)); });
+    };
+    document.getElementById('fps').oninput = function () {
+      S.state.fps = parseInt(this.value, 10);
+      document.getElementById('fpsVal').textContent = S.state.fps + ' 컷/초';
+      if (S._capTab === 'preview') S.refreshPreview();
+    };
+
+    document.getElementById('stripPrev').onclick = function () {
+      if (S._capStart > 0) { S._capStart--; S.drawFrames(); }
+    };
+    document.getElementById('stripNext').onclick = function () {
+      var maxStart = Math.max(0, S.state.frames.length - 8);
+      if (S._capStart < maxStart) { S._capStart++; S.drawFrames(); }
+    };
+
+    S.updateCaptureNav();
+  };
+
+  S.updateCaptureNav = function () {
+    var enough = S.state.frames.length >= 2;
+    S.setNav({
+      back: { label: '◀ 계획', fn: S.prev },
+      center: '찍은 컷 ' + S.state.frames.length + '개',
+      next: { label: '자기평가 ▶', cls: 'accent', disabled: !enough, fn: function () {
+        if (S.state.frames.length < 2) { S.toast('컷이 2장 이상 있어야 영상이 돼요 🙂'); return; }
+        S.next();
+      } }
+    });
+  };
+
+  S.captureTab = function (name) {
+    S._capTab = name;
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+      t.classList.toggle('active', t.dataset.tab === name);
+    });
+    document.getElementById('capShoot').classList.toggle('hidden', name !== 'shoot');
+    document.getElementById('capPreview').classList.toggle('hidden', name !== 'preview');
+    if (name === 'preview') S.refreshPreview(); else S.stopPlayersKeepCamera();
+  };
+
+  /* 카메라 스트림을 한 번만 요청해 재사용합니다. 이미 살아있으면 그대로 돌려줍니다(권한 재요청 X). */
+  S.ensureCamera = function () {
+    var live = S._camStream && S._camStream.getVideoTracks().some(function (t) { return t.readyState === 'live'; });
+    if (live) return Promise.resolve(S._camStream);
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return Promise.reject(new Error('이 기기에서는 카메라를 쓸 수 없어요.'));
+    }
+    return navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      .then(function (stream) { S._camStream = stream; return stream; });
+  };
+
+  S.initCamera = function () {
+    var video = document.getElementById('cam');
+    var empty = document.getElementById('capEmpty');
+    S.ensureCamera().then(function (stream) {
+      video.srcObject = stream; video.classList.remove('hidden'); empty.classList.add('hidden');
+      video.onloadedmetadata = function () { S.applyCamAspect(video); };
+      if (video.videoWidth) S.applyCamAspect(video);
+    }).catch(function () {
+      video.classList.add('hidden'); empty.classList.remove('hidden');
+    });
+  };
+
+  /* 미리보기 박스를 실제 카메라 화면 비율에 맞춰, 검은 띠 없이 꽉 차게 만듭니다 */
+  S.applyCamAspect = function (video) {
+    if (!video || !video.videoWidth || !video.videoHeight) return;
+    var box = document.querySelector('#capShoot .capture-box');
+    if (box) box.style.setProperty('--cam-ar', video.videoWidth + ' / ' + video.videoHeight);
+  };
+
+  S.shoot = function () {
+    var video = document.getElementById('cam');
+    if (!S._camStream || !video.videoWidth) { document.getElementById('fileInput').click(); return; }
+    var cv = document.createElement('canvas');
+    cv.width = video.videoWidth; cv.height = video.videoHeight;
+    cv.getContext('2d').drawImage(video, 0, 0);
+    S.dataUrlToFrame(cv.toDataURL('image/jpeg', 0.8)).then(function (fr) {
+      S.state.frames.push(fr);
+      S.afterFrameChange(); S.toast('찰칵! 📸 (' + S.state.frames.length + '컷)');
+    });
+  };
+
+  S.afterFrameChange = function () {
+    S.drawFrames();
+    S.updateCaptureNav();
+    if (S._capTab === 'preview') S.refreshPreview();
+    S.saveProgress();   // 데모 모드면 찍은 컷까지 이 기기에 저장
+  };
+
+  S.drawFrames = function () {
+    var strip = document.getElementById('strip');
+    if (!strip) return;
+    var fr = S.state.frames;
+    var win = 8;                                         // 한 번에 보이는 컷 수 (2줄 × 4칸)
+    var maxStart = Math.max(0, fr.length - win);
+    if (typeof S._capStart !== 'number') S._capStart = 0;
+    S._capStart = Math.min(Math.max(0, S._capStart), maxStart);
+
+    if (!fr.length) {
+      strip.innerHTML = '<div class="capture-empty" style="color:#aaa;align-self:center;grid-column:1/-1;">아직 찍은 컷이 없어요</div>';
+    } else {
+      var start = S._capStart;
+      strip.innerHTML = fr.slice(start, start + win).map(function (src, k) {
+        var i = start + k;
+        return '<div class="frame-thumb"><span class="idx">' + (i + 1) + '</span><img src="' + src + '">' +
+          '<button class="del" data-del="' + i + '">✕</button></div>';
+      }).join('');
+      Array.prototype.forEach.call(strip.querySelectorAll('[data-del]'), function (b) {
+        b.onclick = function () { S.state.frames.splice(parseInt(b.dataset.del, 10), 1); S.afterFrameChange(); };
+      });
+    }
+
+    var prev = document.getElementById('stripPrev');
+    var next = document.getElementById('stripNext');
+    if (prev) prev.disabled = S._capStart <= 0;
+    if (next) next.disabled = S._capStart >= maxStart;
+    var ind = document.getElementById('capPageInd');
+    if (ind) {
+      var end = Math.min(S._capStart + win, fr.length);
+      ind.textContent = fr.length ? (S._capStart + 1) + '~' + end + ' / ' + fr.length + '컷' : '';
+    }
+  };
+
+  S.refreshPreview = function () {
+    S.stopPlayersKeepCamera();
+    var cv = document.getElementById('preview');
+    if (!cv) return;
+    if (S.state.frames.length) S.playOn(cv, S.state.frames, S.state.fps);
+    else { cv.width = 480; cv.height = 360; var c = cv.getContext('2d'); c.fillStyle = '#222'; c.fillRect(0, 0, 480, 360); c.fillStyle = '#fff'; c.font = '24px Jua'; c.textAlign = 'center'; c.fillText('컷을 찍으면 여기서 움직여요', 240, 185); }
+  };
+
+  /* =========================================================
+   *  ⑤ 자기평가
+   * ========================================================= */
+  S.CHECKS = [
+    '계획한 이야기가 영상에 잘 나타나요.',
+    '컷이 2장 이상이고, 순서가 자연스러워요.',
+    '제목을 알맞게 정했어요.',
+    '친구가 보기에 불편한 내용은 없어요.'
+  ];
+  S.SELF_STARS = [
+    { key: 'creative', label: '🎨 창의성' },
+    { key: 'motion', label: '🏃 움직임' },
+    { key: 'effort', label: '💪 노력' }
+  ];
+
+  S.screenSelfEval = function () {
+    if (S.state.frames.length < 2) { S.toast('먼저 컷을 2장 이상 찍어주세요'); S.go('capture'); return; }
+    S._selfChecks = S._selfChecks || S.CHECKS.map(function () { return false; });
+    S._selfStars = S._selfStars || { creative: 0, motion: 0, effort: 0 };
+
+    S.page(
+      '<div class="eval-layout">' +
+        '<div class="eval-left">' +
+          '<canvas id="evalPreview" class="player-canvas"></canvas>' +
+          '<p class="page__sub" style="margin:0;">제목: <b>' + S.esc(S.state.plan.title) + '</b> · ' + S.state.frames.length + '컷</p>' +
+        '</div>' +
+        '<div class="eval-right">' +
+          '<h3>올리기 전에 스스로 확인해요 ✅</h3>' +
+          '<div id="checkList"></div>' +
+          '<h3>⭐ 스스로 별점</h3>' +
+          '<div id="selfStars"></div>' +
+        '</div>' +
+      '</div>',
+      { title: '자기평가 ✅' }
+    );
+
+    S.playOn(document.getElementById('evalPreview'), S.state.frames, S.state.fps);
+
+    var cl = document.getElementById('checkList');
+    cl.innerHTML = S.CHECKS.map(function (c, i) {
+      return '<label class="check-item' + (S._selfChecks[i] ? ' checked' : '') + '" data-ci="' + i + '">' +
+        '<input type="checkbox" ' + (S._selfChecks[i] ? 'checked' : '') + '><span>' + S.esc(c) + '</span></label>';
+    }).join('');
+    Array.prototype.forEach.call(cl.querySelectorAll('.check-item'), function (lab) {
+      lab.querySelector('input').onchange = function () {
+        S._selfChecks[parseInt(lab.dataset.ci, 10)] = this.checked;
+        lab.classList.toggle('checked', this.checked);
+        S.setNextDisabled(!S._selfChecks.every(Boolean));
+      };
+    });
+
+    var ss = document.getElementById('selfStars');
+    ss.innerHTML = S.SELF_STARS.map(function (row) {
+      return '<div class="peer-row"><span>' + row.label + '</span><span class="stars" data-k="' + row.key + '"></span></div>';
+    }).join('');
+    S.SELF_STARS.forEach(function (row) {
+      renderStars(ss.querySelector('[data-k="' + row.key + '"]'), S._selfStars[row.key], function (v) { S._selfStars[row.key] = v; });
+    });
+
+    S.setNav({
+      back: { label: '◀ 더 찍기', fn: S.prev },
+      center: '확인 후 올려요',
+      next: { label: '🚀 보드에 올리기', cls: 'green', disabled: !S._selfChecks.every(Boolean), fn: S.publish }
+    });
+  };
+
+  S.publish = function () {
+    // 데모(무료 체험): 시트에 저장하지 않고 안내 + 이 학생의 로컬 진행 삭제(다음엔 처음부터)
+    if (S.isDemo()) { S.demoFinish(); return; }
+    var st = S.state;
+    S.loading(true, '영상을 만드는 중…');
+    var thumbP = S.makeThumb(st.frames[0], 150);
+    var gifP = S.buildGif(st.frames, st.fps).catch(function () { return ''; });   // GIF 실패해도 저장은 진행
+    Promise.all([thumbP, gifP]).then(function (res) {
+      S.loading(true, '영상을 올리는 중…');
+      var thumb = res[0], gif = res[1];
+      var planText = '[이야기] ' + (st.plan.story || '') + '\n[컷 계획]\n' +
+        (st.plan.cells || []).map(function (c, i) { return (i + 1) + '. ' + (c || '-'); }).join('\n');
+      return S.call('apiSaveAnimation', {
+        studentId: st.student.id, studentName: st.student.name,
+        title: st.plan.title || '제목 없음', plan: planText,
+        fps: st.fps, frames: st.frames, thumbnail: thumb, gif: gif,
+        selfEval: { checks: S._selfChecks, stars: S._selfStars }
+      });
+    }).then(function () {
+      S.loading(false); S.toast('🎉 보드에 올렸어요! 친구들과 함께 봐요');
+      S._selfChecks = null; S._selfStars = null;
+      S.go('board');
+    }).catch(function (e) { S.loading(false); S.toast(S.errText(e)); });
+  };
+
+  S.resetWork = function () {
+    S.state.plan = { title: '', story: '', cells: ['', '', '', ''] };
+    S.state.frames = []; S.state.fps = 6;
+    S._selfChecks = null; S._selfStars = null;
+    S.gotoKey('plan1', 'next');
+  };
+
+  /* 데모 모드에서 '보드에 올리기'를 누른 순간 = 체험 완료.
+     완성한 '내 작품'을 이 기기에 저장하고, 진행을 초기화한 뒤 다시 볼 수 있게 안내합니다. */
+  S.demoFinish = function () {
+    var st = S.state;
+    var num = st.student ? st.student.number : 0;
+    var planText = '[이야기] ' + (st.plan.story || '') + '\n[컷 계획]\n' +
+      (st.plan.cells || []).map(function (c, i) { return (i + 1) + '. ' + (c || '-'); }).join('\n');
+    var frames = st.frames.slice(), fps = st.fps, title = st.plan.title || '제목 없음';
+
+    var finish = function (thumb) {
+      var work = {
+        id: 'w' + (new Date().getTime()) + '_' + Math.floor(Math.random() * 1000),
+        title: title, plan: planText, fps: fps, frames: frames,
+        thumbnail: thumb, createdAt: new Date().getTime()
+      };
+      if (num) S.saveDemoWork(num, work);
+      if (st.student) S.clearProgress(st.student.number);
+      S.state.plan = { title: '', story: '', cells: ['', '', '', ''] };
+      S.state.frames = []; S.state.fps = 6; S._selfChecks = null; S._selfStars = null;
+      S.modal(
+        '<h2>내 작품을 저장했어요 🎬</h2>' +
+        '<p style="font-size:1.1rem;line-height:1.6;">만든 작품을 이 기기에 저장했어요. <b>내 작품 보기</b>에서 다시 볼 수 있어요.<br>' +
+        '선생님이 구글 시트를 연결하면 친구들과 보드에서 함께 볼 수 있어요.</p>' +
+        '<div class="btn-row" style="margin-top:.8rem;">' +
+          '<button class="btn accent" id="demoView">내 작품 보기</button>' +
+          '<button class="btn ghost" id="demoHome">처음으로</button>' +
+        '</div>'
+      );
+      document.getElementById('demoView').onclick = function () { S.closeModal(); S.go('board'); };
+      document.getElementById('demoHome').onclick = function () { S.closeModal(); S.gotoKey('entry', 'next'); };
+    };
+
+    S.loading(true, '내 작품을 저장하는 중…');
+    S.makeThumb(frames[0], 150)
+      .then(function (thumb) { S.loading(false); finish(thumb); })
+      .catch(function () { S.loading(false); finish(frames[0]); });
+  };
+
+  /* =========================================================
+   *  ⑥ 보드 (하트 많은 순)
+   * ========================================================= */
+  S.screenBoard = function () {
+    S.setNav({});
+    // 데모(무료 체험): 시트가 없으므로, 이 기기에 저장한 '내 작품'을 보여줍니다.
+    if (S.isDemo()) {
+      var works = S.state.student ? S.loadDemoWorks(S.state.student.number) : [];
+      var body;
+      if (!works.length) {
+        body =
+          '<div class="center-col"><div class="logo">🎬</div>' +
+          '<div class="card" style="text-align:center;max-width:34rem;">' +
+            '<p style="font-size:1.15rem;line-height:1.6;">아직 만든 작품이 없어요.<br>' +
+            '<b>나만의 애니 만들기</b>로 첫 작품을 만들어 보세요!<br>' +
+            '만든 작품은 이 기기에 저장되어 여기서 다시 볼 수 있어요.</p>' +
+            '<button class="btn accent" onclick="S.resetWork()">만들러 가기</button>' +
+          '</div></div>';
+      } else {
+        body =
+          '<div class="btn-row" style="justify-content:space-between;flex:none;">' +
+            '<span class="tag">🎬 이 기기에 저장된 내 작품</span>' +
+            '<button class="btn accent" onclick="S.resetWork()">➕ 새 작품</button>' +
+          '</div>' +
+          '<div class="scroll-area"><div id="boardGrid" class="board-grid">' +
+            works.map(function (w) {
+              var thumb = w.thumbnail ? '<img class="thumb" src="' + w.thumbnail + '">' : '<div class="thumb"></div>';
+              return '<div class="vid-card" data-id="' + S.esc(w.id) + '">' + thumb +
+                '<div class="meta"><h3>' + S.esc(w.title) + '</h3>' +
+                '<div class="by">' + (w.frames ? w.frames.length : 0) + '컷</div></div></div>';
+            }).join('') +
+          '</div></div>';
+      }
+      S.page(body, { title: '내 작품 🎬', sub: '체험 모드에서 만든 작품이에요 · 선생님이 연결하면 친구들과 함께 볼 수 있어요' });
+      Array.prototype.forEach.call(document.querySelectorAll('#boardGrid .vid-card'), function (c) {
+        c.onclick = function () {
+          var w = works.filter(function (x) { return String(x.id) === c.dataset.id; })[0];
+          if (w) S.watchDemo(w);
+        };
+      });
+      return;
+    }
+    S.page(
+      '<div class="btn-row" style="justify-content:space-between;flex:none;">' +
+        '<span class="tag">❤️ 하트 많은 순</span>' +
+        '<div class="btn-row">' +
+          '<button class="btn ghost" id="refreshBtn">🔄 새로고침</button>' +
+          '<button class="btn accent" id="newWorkBtn">➕ 새 작품</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="scroll-area"><div id="boardGrid" class="board-grid"></div></div>',
+      { title: '친구들 작품 보드 🖼️', sub: '눌러서 감상하고 ❤️·⭐·💬 로 응원해요!' }
+    );
+    document.getElementById('refreshBtn').onclick = function () { S.loadBoard(true); };
+    document.getElementById('newWorkBtn').onclick = S.resetWork;
+    S.loadBoard(true);
+    S.pushTimer(setInterval(function () {
+      if (S.state.screen === 'board' && !document.getElementById('modalRoot').innerHTML) S.loadBoard(false);
+    }, 8000));
+  };
+
+  S.loadBoard = function (showSpin) {
+    if (showSpin) S.loading(true, '작품을 불러오는 중…');
+    S.call('apiListAnimations').then(function (list) {
+      S.loading(false);
+      var grid = document.getElementById('boardGrid');
+      if (!grid) return;
+      if (!list.length) {
+        grid.innerHTML = '<div class="empty-note">아직 올라온 작품이 없어요.<br>첫 번째 주인공이 되어 보세요! 🌟</div>'; return;
+      }
+      var medal = ['🥇', '🥈', '🥉'];
+      grid.innerHTML = list.map(function (a, i) {
+        var rank = i < 3 ? '<span class="rank">' + medal[i] + ' ' + (i + 1) + '위</span>' : '';
+        var thumb = a.thumbnail ? '<img class="thumb" src="' + a.thumbnail + '">' : '<div class="thumb"></div>';
+        return '<div class="vid-card" data-id="' + S.esc(a.id) + '">' + rank + thumb +
+          '<div class="meta"><h3>' + (i === 0 ? '👑 ' : '') + S.esc(a.title) + '</h3>' +
+          '<div class="by">' + S.esc(a.studentName) + ' · ' + a.frameCount + '컷</div>' +
+          '<div class="heart-line">❤️ ' + a.hearts + '</div></div></div>';
+      }).join('');
+      Array.prototype.forEach.call(grid.querySelectorAll('.vid-card'), function (c) {
+        c.onclick = function () { S.watch(c.dataset.id); };
+      });
+    }).catch(function (e) { S.loading(false); S.toast(S.errText(e)); });
+  };
+
+  /* =========================================================
+   *  감상 + 하트 + 동료평가 + 댓글
+   * ========================================================= */
+  S.PEER = [
+    { key: 'story', label: '📖 이야기가 잘 보여요' },
+    { key: 'motion', label: '🏃 움직임이 자연스러워요' },
+    { key: 'creative', label: '🎨 기발하고 창의적이에요' }
+  ];
+
+  S.modal = function (innerHTML) {
+    var root = document.getElementById('modalRoot');
+    root.innerHTML = '<div class="modal-back" id="mback"><div class="modal"><div class="modal__body">' +
+      '<button class="modal__close" id="mclose">✕</button>' + innerHTML + '</div></div></div>';
+    var close = function () { S.stopPlayersKeepCamera(); root.innerHTML = ''; if (S._onModalClose) { var f = S._onModalClose; S._onModalClose = null; f(); } };
+    document.getElementById('mclose').onclick = close;
+    document.getElementById('mback').onclick = function (e) { if (e.target.id === 'mback') close(); };
+  };
+  S.closeModal = function () { document.getElementById('modalRoot').innerHTML = ''; };
+
+  S.watch = function (animId) {
+    S.loading(true, '영상을 여는 중…');
+    S.call('apiGetAnimationDetail', animId, S.state.student.id).then(function (d) {
+      S.loading(false);
+      S._onModalClose = function () { S.loadBoard(false); };
+      S.modal(
+        '<div class="watch-grid">' +
+          '<div>' +
+            '<h2 style="margin:0 0 .2rem;">' + S.esc(d.meta.title) + '</h2>' +
+            '<div class="by" style="color:#7a7596;margin-bottom:.5rem;">만든이: ' + S.esc(d.meta.studentName) + '</div>' +
+            '<canvas id="watchCanvas" class="watch-canvas"></canvas>' +
+            '<details style="margin-top:.6rem;"><summary>📖 만든이의 계획 보기</summary><pre class="plan">' + S.esc(d.meta.plan) + '</pre></details>' +
+          '</div>' +
+          '<div>' +
+            '<div class="card" style="box-shadow:none;border:.15rem solid #f0ecfb;margin-bottom:.7rem;display:flex;align-items:center;gap:.6rem;">' +
+              '<button class="heart-btn" id="heartBtn">' + (d.hearted ? '❤️' : '🤍') + '</button>' +
+              '<b id="heartCount" style="font-size:1.5rem;color:#ff4d6d;">' + d.hearts + '</b>' +
+              '<span class="page__sub" style="margin:0;">하트로 응원!</span>' +
+            '</div>' +
+            '<div class="card" style="box-shadow:none;border:.15rem solid #f0ecfb;margin-bottom:.7rem;">' +
+              '<h3>⭐ 동료평가</h3><div id="peerStars"></div>' +
+              '<button class="btn green" id="peerSave" style="margin-top:.5rem;font-size:1rem;">평가 저장</button>' +
+              '<p class="page__sub" id="peerSummary" style="margin:.5rem 0 0;"></p>' +
+            '</div>' +
+            '<div class="card" style="box-shadow:none;border:.15rem solid #f0ecfb;">' +
+              '<h3>💬 댓글</h3><div class="comment-list" id="commentList"></div>' +
+              '<div class="btn-row" style="margin-top:.5rem;flex-wrap:nowrap;">' +
+                '<input type="text" id="commentInput" maxlength="200" placeholder="따뜻한 한마디 ✍️">' +
+                '<button class="btn" id="commentSend" style="font-size:1rem;">등록</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+
+      S.playOn(document.getElementById('watchCanvas'), d.frames, d.fps);
+
+      var heartBtn = document.getElementById('heartBtn');
+      heartBtn.onclick = function () {
+        heartBtn.disabled = true;
+        S.call('apiToggleHeart', animId, S.state.student.id).then(function (r) {
+          heartBtn.disabled = false; heartBtn.textContent = r.hearted ? '❤️' : '🤍';
+          document.getElementById('heartCount').textContent = r.hearts;
+          if (r.hearted) S.toast('하트를 보냈어요 ❤️');
+        }).catch(function (e) { heartBtn.disabled = false; S.toast(S.errText(e)); });
+      };
+
+      var my = d.myPeerEval || {};
+      var peerVals = { story: my.story || 0, motion: my.motion || 0, creative: my.creative || 0 };
+      var ps = document.getElementById('peerStars');
+      ps.innerHTML = S.PEER.map(function (row) {
+        return '<div class="peer-row"><span>' + row.label + '</span><span class="stars" data-k="' + row.key + '"></span></div>';
+      }).join('');
+      S.PEER.forEach(function (row) {
+        renderStars(ps.querySelector('[data-k="' + row.key + '"]'), peerVals[row.key], function (v) { peerVals[row.key] = v; });
+      });
+      function showPeer(sum) {
+        document.getElementById('peerSummary').textContent = (!sum || !sum.count)
+          ? '아직 평가가 없어요. 첫 평가를 남겨보세요!'
+          : '친구 ' + sum.count + '명 평균 → 이야기 ' + sum.avg.story + ' · 움직임 ' + sum.avg.motion + ' · 창의 ' + sum.avg.creative;
+      }
+      showPeer(d.peerSummary);
+      document.getElementById('peerSave').onclick = function () {
+        if (!peerVals.story && !peerVals.motion && !peerVals.creative) { S.toast('별점을 한 개 이상 눌러주세요 ⭐'); return; }
+        S.call('apiAddPeerEval', animId, S.state.student.id, S.state.student.name, peerVals).then(function () {
+          S.toast('평가를 저장했어요 ⭐');
+          return S.call('apiGetAnimationDetail', animId, S.state.student.id);
+        }).then(function (nd) { showPeer(nd.peerSummary); }).catch(function (e) { S.toast(S.errText(e)); });
+      };
+
+      S.renderComments(d.comments);
+      var input = document.getElementById('commentInput');
+      var send = function () {
+        var text = (input.value || '').trim();
+        if (!text) return;
+        document.getElementById('commentSend').disabled = true;
+        S.call('apiAddComment', animId, S.state.student.id, S.state.student.name, text).then(function (c) {
+          input.value = ''; document.getElementById('commentSend').disabled = false;
+          d.comments = d.comments.concat([c]); S.renderComments(d.comments);
+        }).catch(function (e) { document.getElementById('commentSend').disabled = false; S.toast(S.errText(e)); });
+      };
+      document.getElementById('commentSend').onclick = send;
+      input.onkeydown = function (e) { if (e.key === 'Enter') send(); };
+    }).catch(function (e) { S.loading(false); S.toast(S.errText(e)); });
+  };
+
+  S.renderComments = function (comments) {
+    var box = document.getElementById('commentList');
+    if (!box) return;
+    if (!comments.length) { box.innerHTML = '<p class="page__sub" style="margin:0;">아직 댓글이 없어요. 첫 댓글을 남겨보세요!</p>'; return; }
+    box.innerHTML = comments.map(function (c) {
+      return '<div class="comment"><span class="who">' + S.esc(c.studentName) + '</span> ' + S.esc(c.text) + '</div>';
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  };
+
+  /* 데모 모드: 이 기기에 저장한 내 작품을 재생해 봅니다. (시트 없이 로컬 프레임으로 재생) */
+  S.watchDemo = function (work) {
+    S.modal(
+      '<div class="watch-grid">' +
+        '<div>' +
+          '<h2 style="margin:0 0 .2rem;">' + S.esc(work.title) + '</h2>' +
+          '<div class="by" style="color:#7a7596;margin-bottom:.5rem;">만든이: ' + S.esc(S.state.student ? S.state.student.name : '나') + '</div>' +
+          '<canvas id="demoCanvas" class="watch-canvas"></canvas>' +
+          '<details style="margin-top:.6rem;"><summary>📖 내 계획 보기</summary><pre class="plan">' + S.esc(work.plan) + '</pre></details>' +
+        '</div>' +
+        '<div>' +
+          '<div class="card" style="box-shadow:none;border:.15rem solid #f0ecfb;">' +
+            '<p class="page__sub" style="margin:0 0 .6rem;">체험 모드에서 만든 내 작품이에요. 선생님이 시트를 연결하면 친구들과 함께 볼 수 있어요.</p>' +
+            '<button class="btn ghost" id="demoDel">🗑️ 이 작품 지우기</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+    S.playOn(document.getElementById('demoCanvas'), work.frames, work.fps);
+    document.getElementById('demoDel').onclick = function () {
+      if (S.state.student) S.deleteDemoWork(S.state.student.number, work.id);
+      S.closeModal(); S.screenBoard();
+    };
+  };
+
+  /* =========================================================
+   *  관리 사이드바 (제출 현황 · 하트 순위 · 관리 기능) — 학생은 쓰지 않습니다
+   * ========================================================= */
+  S.closeSidebar = function () { var r = document.getElementById('sidebarRoot'); if (r) r.innerHTML = ''; };
+  S.adminSidebar = function () {
+    var root = document.getElementById('sidebarRoot');
+    root.innerHTML =
+      '<div class="sidebar-back" id="sbBack"><aside class="sidebar">' +
+        '<div class="sidebar__head"><h2>선생님 메뉴</h2><button class="modal__close" id="sbClose" style="float:none;">✕</button></div>' +
+        '<div class="sidebar__body">' +
+          '<div class="sidebar__sec" id="secStatus"><h3>📊 제출 현황</h3>' +
+            '<div class="page__sub" style="margin:.2rem 0;">불러오는 중…</div></div>' +
+          '<div class="sidebar__sec" id="secRank"><h3>❤️ 하트 순위</h3>' +
+            '<div class="page__sub" style="margin:.2rem 0;">불러오는 중…</div></div>' +
+          '<div class="sidebar__sec"><h3>🛠️ 관리 기능</h3>' +
+            '<div class="btn-row" style="flex-direction:column;align-items:stretch;gap:.5rem;margin-top:.4rem;">' +
+              '<button class="btn" id="sbSetup">🔗 연결 · 학생 링크 만들기</button>' +
+              '<button class="btn ghost" id="sbManage">👥 명단 · 비밀번호 관리</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</aside></div>';
+    document.getElementById('sbClose').onclick = S.closeSidebar;
+    document.getElementById('sbBack').onclick = function (e) { if (e.target.id === 'sbBack') S.closeSidebar(); };
+    document.getElementById('sbSetup').onclick = function () { S.closeSidebar(); S.screenSetup(S.API ? 4 : 1); };
+    document.getElementById('sbManage').onclick = function () {
+      if (S.isDemo()) { S.toast('먼저 웹 앱 주소를 연결하면 명단을 관리할 수 있어요'); return; }
+      S.closeSidebar(); S.teacherAuth();
+    };
+    S.loadAdminData();
+  };
+
+  // 사이드바의 '제출 현황'과 '하트 순위'를 채웁니다. (연동 모드에서만 실제 데이터)
+  S.loadAdminData = function () {
+    var setStatus = function (html) { var el = document.getElementById('secStatus'); if (el) el.innerHTML = '<h3>📊 제출 현황</h3>' + html; };
+    var setRank = function (html) { var el = document.getElementById('secRank'); if (el) el.innerHTML = '<h3>❤️ 하트 순위</h3>' + html; };
+    if (S.isDemo()) {
+      setStatus('<div class="page__sub" style="margin:.2rem 0;">체험 모드에서는 제출 현황을 볼 수 없어요.<br>시트를 연결하면 우리 반 제출 현황이 보여요.</div>');
+      setRank('<div class="page__sub" style="margin:.2rem 0;">시트를 연결하면 하트 순위가 보여요.</div>');
+      return;
+    }
+    Promise.all([S.call('apiGetRoster'), S.call('apiListAnimations')]).then(function (res) {
+      var roster = res[0] || [], list = res[1] || [];
+      // 제출 현황
+      var subCount = {};
+      list.forEach(function (a) { subCount[String(a.studentId)] = (subCount[String(a.studentId)] || 0) + 1; });
+      var done = 0, miss = [];
+      roster.forEach(function (s) { if (subCount[String(s.id)]) done++; else miss.push(s); });
+      var sHtml =
+        '<div class="dash-stat">' +
+          '<div class="dash-num"><b>' + done + '</b><span>제출</span></div>' +
+          '<div class="dash-num"><b>' + roster.length + '</b><span>전체</span></div>' +
+          '<div class="dash-num"><b>' + list.length + '</b><span>작품 수</span></div>' +
+        '</div>';
+      if (!roster.length) sHtml += '<div class="page__sub" style="margin:.2rem 0;">아직 명단이 없어요.</div>';
+      else if (miss.length) sHtml += '<div class="page__sub" style="margin:.2rem 0;">아직 안 낸 친구 (' + miss.length + '명)</div>' +
+        '<div class="chip-list">' + miss.slice(0, 60).map(function (s) { return '<span class="chip-name">' + S.esc(s.name) + '</span>'; }).join('') + '</div>';
+      else sHtml += '<div class="page__sub" style="margin:.2rem 0;">모두 제출했어요! 🎉</div>';
+      setStatus(sHtml);
+      // 하트 순위 (apiListAnimations 는 하트 많은 순으로 정렬되어 옵니다)
+      if (!list.length) { setRank('<div class="page__sub" style="margin:.2rem 0;">아직 올라온 작품이 없어요.</div>'); return; }
+      var medal = ['🥇', '🥈', '🥉'];
+      setRank('<ol class="rank-list">' + list.slice(0, 10).map(function (a, i) {
+        var rk = i < 3 ? medal[i] : (i + 1) + '.';
+        return '<li><span class="rk">' + rk + '</span>' +
+          '<span class="ti">' + S.esc(a.title) + ' · ' + S.esc(a.studentName) + '</span>' +
+          '<span class="ht">❤️ ' + a.hearts + '</span></li>';
+      }).join('') + '</ol>');
+    }).catch(function (e) {
+      setStatus('<div class="page__sub" style="margin:.2rem 0;">' + S.esc(S.errText(e)) + '</div>');
+      setRank('');
+    });
+  };
+
+  // 이전 버전 호환: 예전 코드가 S.teacherSettings 를 부르면 관리 사이드바를 엽니다.
+  S.teacherSettings = function () { S.adminSidebar(); };
+
+  // 명단·비밀번호 관리: 비밀번호 확인 후 관리 패널
+  S.teacherAuth = function () {
+    S.modal(
+      '<h2>👥 명단 · 비밀번호</h2>' +
+      '<p class="page__sub">선생님 비밀번호를 입력하세요. (처음: 1234)</p>' +
+      '<input type="password" id="pinInput" placeholder="비밀번호" style="max-width:16rem;">' +
+      '<div class="btn-row" style="margin-top:.7rem;"><button class="btn" id="pinOk">들어가기</button></div>'
+    );
+    var go = function () {
+      S.call('apiVerifyPin', document.getElementById('pinInput').value).then(function (ok) {
+        if (!ok) { S.toast('비밀번호가 맞지 않아요'); return; }
+        S._pin = document.getElementById('pinInput').value; S.teacherPanel();
+      }).catch(function (e) { S.toast(S.errText(e)); });
+    };
+    document.getElementById('pinOk').onclick = go;
+    document.getElementById('pinInput').onkeydown = function (e) { if (e.key === 'Enter') go(); };
+  };
+
+  S.teacherPanel = function () {
+    S.call('apiGetRoster').then(function (roster) {
+      var text = roster.map(function (r) { return r.number + ',' + r.name; }).join('\n');
+      S.modal(
+        '<h2>⚙️ 선생님 설정</h2>' +
+        '<div class="card" style="box-shadow:none;border:.15rem solid #f0ecfb;margin-bottom:.7rem;">' +
+          '<h3>👥 학생 명단</h3>' +
+          '<p class="page__sub">한 줄에 한 명씩. <b>번호,이름</b> 또는 <b>이름</b>만 적어도 돼요.</p>' +
+          '<textarea id="rosterText" rows="7" placeholder="1,김하늘\n2,이보람\n3,박솔">' + S.esc(text) + '</textarea>' +
+          '<div class="btn-row" style="margin-top:.6rem;"><button class="btn green" id="saveRoster">명단 저장</button></div>' +
+          '<hr style="border:none;border-top:.1rem dashed #e3def5;margin:.9rem 0;">' +
+          '<h3>📑 구글 시트에서 가져오기</h3>' +
+          '<input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/.../edit">' +
+          '<div class="btn-row" style="margin-top:.6rem;"><button class="btn ghost" id="importSheet">시트에서 가져오기</button></div>' +
+        '</div>' +
+        '<div class="card" style="box-shadow:none;border:.15rem solid #f0ecfb;">' +
+          '<h3>🔒 비밀번호 바꾸기</h3>' +
+          '<input type="password" id="newPin" placeholder="새 비밀번호 (4자리 이상)" style="max-width:18rem;">' +
+          '<div class="btn-row" style="margin-top:.6rem;"><button class="btn ghost" id="changePin">변경</button></div>' +
+        '</div>'
+      );
+      document.getElementById('saveRoster').onclick = function () {
+        S.loading(true, '명단 저장 중…');
+        S.call('apiSetRoster', S._pin, document.getElementById('rosterText').value).then(function (r) {
+          S.loading(false); S.toast(r.length + '명 저장 완료! ✅'); S.closeModal();
+          if (S.state.screen === 'entry') S.go('entry');
+        }).catch(function (e) { S.loading(false); S.toast(S.errText(e)); });
+      };
+      document.getElementById('importSheet').onclick = function () {
+        var url = (document.getElementById('sheetUrl').value || '').trim();
+        if (!url) { S.toast('시트 주소를 붙여넣어 주세요'); return; }
+        S.loading(true, '시트에서 가져오는 중…');
+        S.call('apiImportRosterFromSheet', S._pin, url).then(function (r) {
+          S.loading(false); S.toast(r.length + '명 가져왔어요! ✅');
+          document.getElementById('rosterText').value = r.map(function (x) { return x.number + ',' + x.name; }).join('\n');
+        }).catch(function (e) { S.loading(false); S.toast(S.errText(e)); });
+      };
+      document.getElementById('changePin').onclick = function () {
+        S.call('apiChangePin', S._pin, document.getElementById('newPin').value).then(function () {
+          S._pin = document.getElementById('newPin').value; S.toast('비밀번호를 바꿨어요 🔒');
+        }).catch(function (e) { S.toast(S.errText(e)); });
+      };
+    }).catch(function (e) { S.toast(S.errText(e)); });
+  };
+
+  /* 앱이 시작될 때 카메라 사용 권한을 한 번만 물어보고, 받은 스트림을 그대로 유지합니다.
+     촬영 화면에서는 이 스트림을 재사용하므로 권한을 다시 묻지 않습니다. */
+  S.requestCameraPermission = function () {
+    S.ensureCamera().catch(function () {});
+  };
+
+  /* ---------- 부팅 ---------- */
+  S.boot = function () {
+    S.bootCommon();
+    S.requestCameraPermission();
+    // 학생 앱: 공용 기기에서도 매번 자기 이름을 고르도록 '항상' 이름 선택(입장)부터 시작합니다.
+    // (선생님 설정은 시작 화면의 '입장하기' 버튼 아래에서만 열립니다)
+    S.gotoKey('entry', 'next');
+  };
+
+})(window.S);
+
+
+/* =========================================================
+ *  무료 체험(데모) 모드 데이터 — 시트를 연결하지 않았을 때 씁니다.
+ *  - 명단은 학생1~학생30 (연동 없이 누구나 골라 체험)
+ *  - 활동 진행상황은 이 기기(localStorage)에 저장해 이어하기가 됩니다.
+ *  - 시트에 저장하는 기능(작품 올리기·보드 등)은 동작시키지 않고 안내만 합니다.
+ * ========================================================= */
+var DEMO = {
+  apiGetConfig: function () { return { rosterLoaded: true, rosterCount: 30, dataUrl: '#demo' }; },
+  apiGetRoster: function () {
+    var out = [];
+    for (var i = 1; i <= 30; i++) out.push({ id: 'demo' + i, number: i, name: '학생' + i });
+    return out;
+  },
+  apiListAnimations: function () { return []; }   // 데모에는 저장된 작품이 없습니다
+};
+
+/* ---- 준비가 끝난 뒤에 앱 시작 ---- */
+(function () {
+  function start() { window.S.boot(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
+</script>
+<!-- Studio.html 끝 -->
+
+
+<script>
+(function () {
+  function showDemoBanner() {
+    try {
+      var demo = (window.S && typeof S.isDemo === 'function') ? S.isDemo() : false;
+      if (demo) {
+        var b = document.getElementById('demoBannerFixed');
+        if (b) b.style.display = 'flex';
+      }
+    } catch (e) {}
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(showDemoBanner, 300); });
+  else setTimeout(showDemoBanner, 300);
+})();
+</script>
+</body>
+</html>

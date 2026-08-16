@@ -1688,5 +1688,78 @@
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', show); } else { show(); }
 })();
 </script>
+<script>
+/* 연결 해제 — 화면에 그려진 '연결하기' 버튼을 찾아 그 바로 아래에 붙입니다.
+   설정 창을 열었을 때만 보이고, 학생용 링크에서는 나오지 않습니다.
+   (문서를 건드리지 않고 화면이 그려진 뒤에 붙이므로 앱 코드에 영향이 없습니다) */
+(function () {
+  var PAT = /exec|gasurl|gas_url|serverurl|server_url|sheet_api|apiurl|api_url|appserverurl|endpoint|gas/i;
+  function keys() {
+    var out = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i) || '', v = localStorage.getItem(k) || '';
+        if (PAT.test(k) && /^https?:\/\//.test(v)) out.push(k);
+      }
+    } catch (e) {}
+    return out;
+  }
+  function isLink() { try { return /[#&]c=/.test(location.hash || ''); } catch (e) { return false; } }
+  function findConnectBtn() {
+    var all = document.querySelectorAll('button, a[role="button"], input[type="button"], input[type="submit"]');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      var t = (el.textContent || el.value || '').replace(/\s+/g, '');
+      if (!/연결하기|시트연결|저장하고시작하기|주소저장|연결$/.test(t)) continue;
+      return el;
+    }
+    return null;
+  }
+  function make() {
+    var b = document.createElement('button');
+    b.id = '__cutSmart';
+    b.type = 'button';
+    b.textContent = '\uD83D\uDD0C \uC5F0\uACB0 \uD574\uC81C';
+    b.style.cssText = 'display:block;width:100%;margin-top:8px;background:#fff;color:#b91c1c;'
+      + 'border:2px solid #fecaca;border-radius:10px;padding:9px 14px;font-size:14px;'
+      + 'font-weight:700;cursor:pointer;font-family:inherit;box-sizing:border-box;';
+    b.onclick = function (ev) {
+      ev.preventDefault(); ev.stopPropagation();
+      var ks = keys();
+      if (!ks.length) { alert('연결된 시트 주소가 없어요.'); return; }
+      if (!confirm('이 기기에서 시트 연결을 끊을까요?\n\n시트에 저장된 학생 기록은 지워지지 않아요.\n다시 연결하려면 주소를 붙여 넣으면 됩니다.')) return;
+      ks.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+      alert('연결을 끊었어요. 화면을 새로 불러올게요.');
+      try { location.hash = ''; } catch (e) {}
+      location.reload();
+    };
+    return b;
+  }
+  function sync() {
+    var old = document.getElementById('__cutSmart');
+    if (isLink() || keys().length === 0) { if (old && old.parentNode) old.parentNode.removeChild(old); return; }
+    var target = findConnectBtn();
+    if (!target) { if (old && old.parentNode) old.parentNode.removeChild(old); return; }
+    if (old && old.previousElementSibling === target) return;
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    var b = make();
+    if (target.parentNode) target.parentNode.insertBefore(b, target.nextSibling);
+  }
+  function boot() {
+    sync();
+    setTimeout(sync, 900);
+    setTimeout(sync, 2500);
+    document.addEventListener('click', function () { setTimeout(sync, 350); }, true);
+    try {
+      new MutationObserver(function () {
+        clearTimeout(window.__cutT);
+        window.__cutT = setTimeout(sync, 250);
+      }).observe(document.body, { childList: true, subtree: true });
+    } catch (e) {}
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
 </body>
 </html>

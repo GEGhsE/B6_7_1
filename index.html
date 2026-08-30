@@ -1208,6 +1208,14 @@
       var st=document.getElementById('conn-state');
       if(st){st.textContent='학생용 주소를 복사했어요.';st.style.color='#15803d';}
     }
+    /* [수정] 선생님 설정 버튼이 눌리지 않던 문제
+       이 코드는 (()=>{ ... })() 상자 안에 들어 있어서
+       HTML 의 onclick="toggleTeacherPanel()" 이 함수를 찾지 못했습니다.
+       다른 함수들처럼 window 에 등록해 줍니다. */
+    window.toggleTeacherPanel = toggleTeacherPanel;
+    window.connectSheet       = connectSheet;
+    window.copyStudentLink    = copyStudentLink;
+
     function initModeUI(){
       // 앱스 스크립트에서 열렸거나 학생용 링크로 들어오면 선생님 설정을 숨긴다
       var setup=document.getElementById('teacher-setup');

@@ -1010,7 +1010,39 @@
     let weakNotesPool=[];
     let sessCorrect=0, sessTry=0, sessBestCombo=0;
     let currentInst='piano';
-    const INST_DATA={piano:{type:'triangle',a:.02,d:1.2,g:.35,label:'🎹 피아노'},flute:{type:'sine',a:.1,d:1,g:.25,label:'🌬️ 플루트'},xylophone:{type:'sine',a:.005,d:.4,g:.4,label:'🔔 실로폰'},trumpet:{type:'square',a:.05,d:.8,g:.12,label:'🎺 트럼펫'}};
+    /* 악기별 배음 설정: partials = [{ratio: 배음비, amp: 상대음량, type: 파형}]
+       attack=초, decay=초, sustain=비율(0~1), release=초, volume=전체음량 */
+    const INST_DATA={
+      piano:{label:'🎹 피아노',volume:.7,attack:.005,decay:.08,sustain:.3,release:1.4,
+        partials:[
+          {ratio:1,amp:1,type:'triangle'},
+          {ratio:2,amp:.45,type:'sine'},
+          {ratio:3,amp:.2,type:'sine'},
+          {ratio:4,amp:.08,type:'sine'},
+          {ratio:5,amp:.03,type:'sine'}
+        ]},
+      flute:{label:'🌬️ 플루트',volume:.55,attack:.08,decay:.1,sustain:.7,release:.6,vibRate:5,vibDepth:3,
+        partials:[
+          {ratio:1,amp:1,type:'sine'},
+          {ratio:2,amp:.12,type:'sine'},
+          {ratio:3,amp:.04,type:'sine'}
+        ]},
+      xylophone:{label:'🔔 실로폰',volume:.75,attack:.001,decay:.02,sustain:.05,release:.45,
+        partials:[
+          {ratio:1,amp:1,type:'sine'},
+          {ratio:3,amp:.5,type:'sine'},
+          {ratio:5,amp:.2,type:'sine'},
+          {ratio:7.2,amp:.1,type:'sine'}
+        ]},
+      trumpet:{label:'🎺 트럼펫',volume:.45,attack:.04,decay:.06,sustain:.6,release:.5,vibRate:5.5,vibDepth:2,
+        partials:[
+          {ratio:1,amp:1,type:'sawtooth'},
+          {ratio:2,amp:.6,type:'sine'},
+          {ratio:3,amp:.35,type:'sine'},
+          {ratio:4,amp:.18,type:'sine'},
+          {ratio:5,amp:.08,type:'sine'}
+        ]}
+    };
 
     /* ========== STUDENT-KEYED HELPERS (Track 1) ========== */
     function stuKey(){return studentInfo?(studentInfo.number+'_'+studentInfo.name):'guest'}
@@ -1143,9 +1175,7 @@
       }).checkLogin(s.number, s.name, pw);
     }
 
-    /* ===== 선생님 설정 · 실행 모드 안내 =====
-       [수정] 이 함수들이 안쪽 블록에 갇혀 버튼이 부르지 못하던 문제를 고칩니다.
-              아래에서 window 에 붙여 어디서나 부를 수 있게 합니다. */
+    /* ===== 선생님 설정 · 실행 모드 안내 ===== */
     function toggleTeacherPanel(){
       var p=document.getElementById('teacher-panel');
       if(!p) return;
@@ -1201,11 +1231,6 @@
         if(box&&link){link.value=studentLinkFor(saved);box.style.display='block';}
       }
     }
-    // [수정] 버튼의 onclick 이 찾을 수 있도록 전역에 등록합니다.
-    window.toggleTeacherPanel = toggleTeacherPanel;
-    window.connectSheet       = connectSheet;
-    window.copyStudentLink    = copyStudentLink;
-
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initModeUI);
     else initModeUI();
     window.handleLogin=handleLogin;
@@ -1213,9 +1238,85 @@
 
     /* ========== AUDIO ========== */
     let ctx=null;
-    function ensureAudio(){if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume()}
-    function beep(pitch,dur,gain){if(!isSoundOn)return;var f=freq(pitch);if(!f)return;ensureAudio();var now=ctx.currentTime,d=INST_DATA[currentInst],o=ctx.createOscillator(),g2=ctx.createGain();o.type=d.type;o.frequency.setValueAtTime(f,now);var ug=(gain||.16)*(d.g/.16);g2.gain.setValueAtTime(.0001,now);g2.gain.exponentialRampToValueAtTime(ug,now+d.a);g2.gain.exponentialRampToValueAtTime(.0001,now+d.d);o.connect(g2).connect(ctx.destination);o.start(now);o.stop(now+d.d+.05)}
-    function beepManual(f2,dur){if(!isSoundOn)return;ensureAudio();var now=ctx.currentTime,o=ctx.createOscillator(),g2=ctx.createGain();o.frequency.setValueAtTime(f2,now);g2.gain.setValueAtTime(.1,now);g2.gain.exponentialRampToValueAtTime(.0001,now+dur);o.connect(g2).connect(ctx.destination);o.start();o.stop(now+dur)}
+    let masterGain=null;
+
+    function ensureAudio(){
+      try{
+        if(!ctx){
+          ctx=new(window.AudioContext||window.webkitAudioContext)();
+          masterGain=ctx.createGain();
+          masterGain.gain.value=1.0;
+          masterGain.connect(ctx.destination);
+        }
+        if(ctx.state==='suspended')ctx.resume();
+      }catch(e){}
+    }
+
+    /* 배음 합성으로 악기 소리를 만드는 함수 */
+    function beep(pitch,gainMult){
+      if(!isSoundOn)return;
+      try{
+        var f0=freq(pitch);if(!f0)return;
+        ensureAudio();if(!ctx||!masterGain)return;
+        var inst=INST_DATA[currentInst];
+        var now=ctx.currentTime;
+        var vol=inst.volume*(gainMult||1);
+        var atk=inst.attack, dec=inst.decay, sus=inst.sustain, rel=inst.release;
+        var peakTime=now+atk;
+        var susTime=peakTime+dec;
+        var endTime=susTime+rel;
+
+        inst.partials.forEach(function(p){
+          var osc=ctx.createOscillator();
+          var gain=ctx.createGain();
+          osc.type=p.type;
+          osc.frequency.setValueAtTime(f0*p.ratio,now);
+
+          /* ADSR 엔벨로프 */
+          var pVol=vol*p.amp;
+          gain.gain.setValueAtTime(0.0001,now);
+          gain.gain.linearRampToValueAtTime(pVol,peakTime);
+          gain.gain.linearRampToValueAtTime(pVol*sus,susTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001,endTime);
+
+          /* 비브라토 (플루트, 트럼펫) */
+          if(inst.vibRate&&inst.vibDepth){
+            var lfo=ctx.createOscillator();
+            var lfoGain=ctx.createGain();
+            lfo.type='sine';
+            lfo.frequency.value=inst.vibRate;
+            lfoGain.gain.value=inst.vibDepth;
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            lfo.start(now+atk+dec*0.5);
+            lfo.stop(endTime+0.05);
+          }
+
+          osc.connect(gain);
+          gain.connect(masterGain);
+          osc.start(now);
+          osc.stop(endTime+0.05);
+        });
+      }catch(e){}
+    }
+
+    /* 효과음용 간단 합성 (콤보 등) */
+    function beepManual(f2,dur){
+      if(!isSoundOn)return;
+      try{
+        ensureAudio();if(!ctx||!masterGain)return;
+        var now=ctx.currentTime;
+        var osc=ctx.createOscillator();
+        var gain=ctx.createGain();
+        osc.type='triangle';
+        osc.frequency.setValueAtTime(f2,now);
+        gain.gain.setValueAtTime(0.4,now);
+        gain.gain.linearRampToValueAtTime(0.4,now+dur*0.6);
+        gain.gain.exponentialRampToValueAtTime(0.0001,now+dur);
+        osc.connect(gain);gain.connect(masterGain);
+        osc.start(now);osc.stop(now+dur+0.05);
+      }catch(e){}
+    }
     function setInstrument(key){currentInst=key;el.btnInst.textContent='🎹 악기: '+INST_DATA[key].label.replace(/^.+\s/,'');el.instOverlay.classList.remove('visible');if(isSoundOn&&current)beep(current.pitch)}
     window.setInstrument=setInstrument;
     el.btnInst.onclick=()=>el.instOverlay.classList.add('visible');
@@ -1308,7 +1409,7 @@
       if(!current)return;updateBadge();updateKeySig();updateDoMarker();updateSoundButtons();showHintText();
       el.note.classList.remove('hidden');setNoteStep(current.step);
       el.feedback.textContent=TOPIC[currentTopic].label+' · 🔍 이 음표의 정체를 밝혀라!';
-      rebuildAnswers(notes);/* 12음 전체 항상 표시 (6×2 그리드) */questionStartTime=Date.now();if(isSoundOn)beep(current.pitch,.85,.16);
+      rebuildAnswers(notes);/* 12음 전체 항상 표시 (6×2 그리드) */questionStartTime=Date.now();if(isSoundOn)beep(current.pitch);
     }
     function nextQuestion(){[...el.answers.querySelectorAll('.a')].forEach(b=>b.classList.remove('good','bad'));pickNext();applyQuestion()}
 
@@ -1362,7 +1463,7 @@
       el.note.classList.remove('hidden');setNoteStep(current.step);
       var tl=kingQuizState.currentType==='pitch'?'음이름':'계이름',tpL=topicLabel(currentTopic);
       el.feedback.textContent='[왕중왕] '+kingQuizState.count+'/10 - '+tpL+' "'+tl+'"은?';
-      rebuildAnswers(notes,kingQuizState.currentType);questionStartTime=Date.now();if(isSoundOn)beep(current.pitch,.85,.16);
+      rebuildAnswers(notes,kingQuizState.currentType);questionStartTime=Date.now();if(isSoundOn)beep(current.pitch);
     }
     function finishKingChallenge(){
       var sc=kingQuizState.score,badge=sc>=8?1:0;
@@ -1439,7 +1540,7 @@
     el.closeStage.addEventListener('click',function(){el.stageOverlay.classList.remove('visible');show('home')});
     el.stageOverlay.addEventListener('click',function(e){if(e.target===el.stageOverlay){el.stageOverlay.classList.remove('visible');show('home')}});
     el.stageOverlay.querySelectorAll('.stage[data-stage]').forEach(function(s){s.addEventListener('click',function(){soundStage=s.dataset.stage;el.stageOverlay.classList.remove('visible');nextQuestion()})});
-    el.btnSound.addEventListener('click',function(){isSoundOn=!isSoundOn;if(isSoundOn)ensureAudio();updateSoundButtons();if(isSoundOn&&current)beep(current.pitch,.85,.16)});
+    el.btnSound.addEventListener('click',function(){isSoundOn=!isSoundOn;if(isSoundOn)ensureAudio();updateSoundButtons();if(isSoundOn&&current)beep(current.pitch)});
 
     /* 사이드바 액션 버튼 */
     if(el.cpBtnConcept)el.cpBtnConcept.onclick=function(){if(typeof startConcept==='function')startConcept(currentTopic)};
@@ -1628,7 +1729,7 @@
         };
         el.closeConceptHint.onclick=function(){el.conceptHintOverlay.classList.remove('visible')};
       }else{el.nextSlide.disabled=false;el.nextSlide.style.opacity='1';el.hintSlide.style.display='none'}
-      function checkAll(){if([...el.slideScreen.querySelectorAll('.keyword-input')].every(ip=>ip.classList.contains('correct'))){el.nextSlide.disabled=false;el.nextSlide.style.opacity='1';el.hintSlide.style.display='none';createConfetti(10);if(isSoundOn)beep('C5',.1)}}
+      function checkAll(){if([...el.slideScreen.querySelectorAll('.keyword-input')].every(ip=>ip.classList.contains('correct'))){el.nextSlide.disabled=false;el.nextSlide.style.opacity='1';el.hintSlide.style.display='none';createConfetti(10);if(isSoundOn)beep('C5')}}
     }
     el.nextSlide.onclick=function(){if(currentSlide<currentSlides.length-1){currentSlide++;showSlide(currentSlide)}else startMiniQuiz()};
     el.prevSlide.onclick=function(){if(currentSlide>0){currentSlide--;showSlide(currentSlide)}};
@@ -1637,7 +1738,7 @@
       var qs=getQuizData(currentTopic),qi=0;
       function nxtQ(){if(qi>=qs.length){showCelebration('개념 박사 탄생! 🎓',topicLabel(currentTopic)+'의 원리를 완벽히 이해했구나!<br>이제 신나게 퀴즈를 풀어보자!',function(){el.slideOverlay.classList.remove('visible');setTopic(currentTopic)});return}
         var q=qs[qi];el.quizQuestion.textContent=q.q;el.quizOptions.innerHTML=q.a.map(function(txt,i){return'<button class="q-btn" onclick="checkQ('+i+','+q.correct+')">'+txt+'</button>'}).join('');el.quizProgress.textContent='문제 '+(qi+1)+' / '+qs.length}
-      window.checkQ=function(i,c){if(i===c){createConfetti(35);if(isSoundOn){beep('G4',.1);setTimeout(function(){beep('C5',.3)},100)}qi++;setTimeout(nxtQ,600)}else showCelebration('앗! 다시 생각해보자 🤔','슬라이드 내용을 다시 떠올려볼까?',null,'retry')};
+      window.checkQ=function(i,c){if(i===c){createConfetti(35);if(isSoundOn){beep('G4');setTimeout(function(){beep('C5')},100)}qi++;setTimeout(nxtQ,600)}else showCelebration('앗! 다시 생각해보자 🤔','슬라이드 내용을 다시 떠올려볼까?',null,'retry')};
       nxtQ();
     }
 
@@ -1656,7 +1757,7 @@
     function showCelebration(title,msg,onConfirm,type,btnText){
       el.successOverlay.classList.add('visible');el.successOverlay.style.display='flex';el.successTitle.innerHTML=title;el.successMsg.innerHTML=msg;el.successIcon.textContent=type==='success'?'👑':'💡';
       el.successClose.textContent=btnText||(type==='success'?'신난다! 시작하기':'알겠어! 다시 하기');
-      if(type==='success'){createConfetti();if(isSoundOn){beep('C5',.2);setTimeout(function(){beep('E5',.2)},150);setTimeout(function(){beep('G5',.4)},300)}}
+      if(type==='success'){createConfetti();if(isSoundOn){beep('C5');setTimeout(function(){beep('E5')},150);setTimeout(function(){beep('G5')},300)}}
       el.successClose.onclick=function(){el.successOverlay.style.display='none';el.successOverlay.classList.remove('visible');if(onConfirm)onConfirm()};
     }
 
@@ -1693,79 +1794,6 @@
     document.body.classList.add('has-demo-bar');
   }
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', show); } else { show(); }
-})();
-</script>
-<script>
-/* 연결 해제 — 화면에 그려진 '연결하기' 버튼을 찾아 그 바로 아래에 붙입니다.
-   설정 창을 열었을 때만 보이고, 학생용 링크에서는 나오지 않습니다.
-   (문서를 건드리지 않고 화면이 그려진 뒤에 붙이므로 앱 코드에 영향이 없습니다) */
-(function () {
-  var PAT = /exec|gasurl|gas_url|serverurl|server_url|sheet_api|apiurl|api_url|appserverurl|endpoint|gas/i;
-  function keys() {
-    var out = [];
-    try {
-      for (var i = 0; i < localStorage.length; i++) {
-        var k = localStorage.key(i) || '', v = localStorage.getItem(k) || '';
-        if (PAT.test(k) && /^https?:\/\//.test(v)) out.push(k);
-      }
-    } catch (e) {}
-    return out;
-  }
-  function isLink() { try { return /[#&]c=/.test(location.hash || ''); } catch (e) { return false; } }
-  function findConnectBtn() {
-    var all = document.querySelectorAll('button, a[role="button"], input[type="button"], input[type="submit"]');
-    for (var i = 0; i < all.length; i++) {
-      var el = all[i];
-      var t = (el.textContent || el.value || '').replace(/\s+/g, '');
-      if (!/연결하기|시트연결|저장하고시작하기|주소저장|연결$/.test(t)) continue;
-      return el;
-    }
-    return null;
-  }
-  function make() {
-    var b = document.createElement('button');
-    b.id = '__cutSmart';
-    b.type = 'button';
-    b.textContent = '\uD83D\uDD0C \uC5F0\uACB0 \uD574\uC81C';
-    b.style.cssText = 'display:block;width:100%;margin-top:8px;background:#fff;color:#b91c1c;'
-      + 'border:2px solid #fecaca;border-radius:10px;padding:9px 14px;font-size:14px;'
-      + 'font-weight:700;cursor:pointer;font-family:inherit;box-sizing:border-box;';
-    b.onclick = function (ev) {
-      ev.preventDefault(); ev.stopPropagation();
-      var ks = keys();
-      if (!ks.length) { alert('연결된 시트 주소가 없어요.'); return; }
-      if (!confirm('이 기기에서 시트 연결을 끊을까요?\n\n시트에 저장된 학생 기록은 지워지지 않아요.\n다시 연결하려면 주소를 붙여 넣으면 됩니다.')) return;
-      ks.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
-      alert('연결을 끊었어요. 화면을 새로 불러올게요.');
-      try { location.hash = ''; } catch (e) {}
-      location.reload();
-    };
-    return b;
-  }
-  function sync() {
-    var old = document.getElementById('__cutSmart');
-    if (isLink() || keys().length === 0) { if (old && old.parentNode) old.parentNode.removeChild(old); return; }
-    var target = findConnectBtn();
-    if (!target) { if (old && old.parentNode) old.parentNode.removeChild(old); return; }
-    if (old && old.previousElementSibling === target) return;
-    if (old && old.parentNode) old.parentNode.removeChild(old);
-    var b = make();
-    if (target.parentNode) target.parentNode.insertBefore(b, target.nextSibling);
-  }
-  function boot() {
-    sync();
-    setTimeout(sync, 900);
-    setTimeout(sync, 2500);
-    document.addEventListener('click', function () { setTimeout(sync, 350); }, true);
-    try {
-      new MutationObserver(function () {
-        clearTimeout(window.__cutT);
-        window.__cutT = setTimeout(sync, 250);
-      }).observe(document.body, { childList: true, subtree: true });
-    } catch (e) {}
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
 })();
 </script>
 </body>
